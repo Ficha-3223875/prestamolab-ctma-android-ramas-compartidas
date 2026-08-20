@@ -1,0 +1,107 @@
+package com.example.miprestamoslab.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
+import com.example.miprestamoslab.domain.ambienteValido
+import com.example.miprestamoslab.domain.duracionValida
+import com.example.miprestamoslab.domain.propositoValido
+import com.example.miprestamoslab.model.EstadoSolicitud
+import com.example.miprestamoslab.model.SolicitudPrestamo
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class PrestamoViewModel(
+    private val repository: InMemoryPrestamoRepository = InMemoryPrestamoRepository()
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(PrestamoUiState())
+    val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.equipos.combine(repository.solicitudes) { eq, sol ->
+                PrestamoUiState(equipos = eq, solicitudes = sol)
+            }.collect { combined ->
+                _uiState.update { it.copy(equipos = combined.equipos, solicitudes = combined.solicitudes) }
+            }
+        }
+    }
+
+    fun cargarEquipo(equipoId: Int) {
+        val equipo = repository.obtenerEquipo(equipoId)
+        _uiState.update { it.copy(equipoSeleccionado = equipo) }
+    }
+
+    fun cargarSolicitud(solicitudId: Int) {
+        val solicitud = repository.obtenerSolicitud(solicitudId)
+        _uiState.update { it.copy(solicitudSeleccionada = solicitud) }
+    }
+
+    fun limpiarMensaje() {
+        _uiState.update { it.copy(mensaje = null) }
+    }
+
+    fun limpiarSeleccion() {
+        _uiState.update { it.copy(equipoSeleccionado = null, solicitudSeleccionada = null) }
+    }
+
+    fun crearSolicitud(
+        equipoId: Int,
+        ambiente: String,
+        proposito: String,
+        duracion: String,
+        onSuccess: () -> Unit
+    ) {
+        // Validaciones
+        val errores = mutableListOf<String>()
+        if (!ambienteValido(ambiente)) errores.add("El ambiente o destino es obligatorio.")
+        if (!propositoValido(proposito)) errores.add("El propósito debe tener entre 10 y 180 caracteres.")
+        val duracionInt = duracion.toIntOrNull()
+        if (duracionInt == null || !duracionValida(duracionInt)) errores.add("La duración debe estar entre 1 y 8 horas.")
+
+        if (errores.isNotEmpty()) {
+            _uiState.update { it.copy(mensaje = errores.joinToString("\n")) }
+            return
+        }
+
+        // Evitar doble pulsación
+        if (_uiState.value.guardando) return
+
+        _uiState.update { it.copy(guardando = true) }
+
+        val solicitud = SolicitudPrestamo(
+            id = 0, // Se asigna en repositorio
+            equipoId = equipoId,
+            ambienteDestino = ambiente.trim(),
+            proposito = proposito.trim(),
+            duracionHoras = duracionInt!!,
+            estado = EstadoSolicitud.SOLICITADA
+        )
+
+        val resultado = repository.crearSolicitud(solicitud)
+
+        _uiState.update { it.copy(guardando = false) }
+
+        resultado
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Solicitud registrada correctamente") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al crear solicitud") }
+            }
+    }
+
+    fun cancelarSolicitud(solicitudId: Int, onSuccess: () -> Unit = {}) {
+        val resultado = repository.cancelarSolicitud(solicitudId)
+        resultado
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Solicitud cancelada correctamente") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al cancelar solicitud") }
+            }
+    }
+}
