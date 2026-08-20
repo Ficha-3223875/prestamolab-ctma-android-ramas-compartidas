@@ -1,10 +1,9 @@
 package com.example.prestamolab.ui.equipo
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.prestamolab.data.model.EstadoEquipo
@@ -25,15 +24,20 @@ fun EquipoDetalleScreen(
             TopAppBar(
                 title = { Text("Detalle del Equipo") },
                 navigationIcon = {
-                    IconButton(onClick = onVolverClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    TextButton(onClick = onVolverClick) {
+                        Text("< Volver", style = MaterialTheme.typography.titleMedium)
                     }
                 }
             )
         }
     ) { padding ->
         if (equipo == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("Equipo no encontrado") // Manejo de ID inexistente (RN-08)[cite: 1]
             }
         } else {
