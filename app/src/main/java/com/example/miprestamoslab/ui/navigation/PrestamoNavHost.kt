@@ -23,7 +23,9 @@ sealed class Screen(val route: String) {
     object MisSolicitudes : Screen("misSolicitudes")
     object SolicitudDetalle : Screen("solicitudDetalle/{solicitudId}") {
         fun createRoute(solicitudId: Int) = "solicitudDetalle/$solicitudId"
+
     }
+    object SolicitudesPendientes : Screen("solicitudesPendientes")
 }
 
 @Composable
@@ -41,7 +43,8 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
                 },
                 onVerMisSolicitudes = {
                     navController.navigate(Screen.MisSolicitudes.route)
-                }
+                },
+                onVerSolicitudesPendientes = { navController.navigate(Screen.SolicitudesPendientes.route) }
             )
         }
 
@@ -118,6 +121,18 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
                         navController.popBackStack()
                     }
                 },
+                onBack = { navController.popBackStack() }
+            )
+
+        }
+
+        composable(Screen.SolicitudesPendientes.route) {
+            SolicitudesPendientesScreen(
+                solicitudesPendientes = uiState.solicitudes.filter {
+                    it.estado == com.example.miprestamoslab.model.EstadoSolicitud.SOLICITADA
+                },
+                onAprobar = { id -> viewModel.aprobarSolicitud(id) },
+                onRechazar = { id, razon -> viewModel.rechazarSolicitud(id, razon) },
                 onBack = { navController.popBackStack() }
             )
         }

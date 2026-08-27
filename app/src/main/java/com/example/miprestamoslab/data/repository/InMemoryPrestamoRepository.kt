@@ -85,4 +85,44 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
         return Result.success(Unit)
     }
+
+    override fun aprobarSolicitud(id: Int): Result<Unit> {
+        val solicitud = _solicitudes.value.find { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
+
+        if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
+            return Result.failure(IllegalStateException("Solo se pueden aprobar solicitudes en estado SOLICITADA"))
+        }
+
+        _solicitudes.value = _solicitudes.value.map {
+            if (it.id == id) it.copy(estado = EstadoSolicitud.APROBADA) else it
+        }
+
+        return Result.success(Unit)
+    }
+
+    override fun rechazarSolicitud(id: Int, razon: String): Result<Unit> {
+        val solicitud = _solicitudes.value.find { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
+
+        if (solicitud.estado != EstadoSolicitud.SOLICITADA) {
+            return Result.failure(IllegalStateException("Solo se pueden rechazar solicitudes en estado SOLICITADA"))
+        }
+
+        if (razon.trim().length < 5) {
+            return Result.failure(IllegalArgumentException("Debes indicar una razón de rechazo válida"))
+        }
+
+        // Liberar el equipo asociado
+        _equipos.value = _equipos.value.map {
+            if (it.id == solicitud.equipoId) it.copy(estado = EstadoEquipo.DISPONIBLE) else it
+        }
+
+        _solicitudes.value = _solicitudes.value.map {
+            if (it.id == id) it.copy(estado = EstadoSolicitud.RECHAZADA, razonRechazo = razon.trim()) else it
+        }
+
+        return Result.success(Unit)
+    }
+
 }

@@ -104,4 +104,15 @@ class PrestamoViewModel(
                 _uiState.update { it.copy(mensaje = error.message ?: "Error al cancelar solicitud") }
             }
     }
+    fun aprobarSolicitud(solicitudId: Int) {
+        repository.aprobarSolicitud(solicitudId)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al aprobar solicitud") } }
+    }
+
+    fun rechazarSolicitud(solicitudId: Int, razon: String) {
+        repository.rechazarSolicitud(solicitudId, razon)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud") } }
+    }
 }

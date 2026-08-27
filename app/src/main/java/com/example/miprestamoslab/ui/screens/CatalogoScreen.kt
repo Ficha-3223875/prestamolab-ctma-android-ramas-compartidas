@@ -20,11 +20,19 @@ import com.example.miprestamoslab.model.EstadoEquipo
 fun CatalogoScreen(
     equipos: List<Equipo>,
     onEquipoClick: (Int) -> Unit,
-    onVerMisSolicitudes: () -> Unit
+    onVerMisSolicitudes: () -> Unit,
+    onVerSolicitudesPendientes: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Catálogo de Equipos") })
+            TopAppBar(
+                title = { Text("Catálogo de Equipos") },
+                actions = {
+                    IconButton(onClick = onVerSolicitudesPendientes) {
+                        Icon(Icons.Default.List, contentDescription = "Solicitudes pendientes")
+                    }
+                }
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(

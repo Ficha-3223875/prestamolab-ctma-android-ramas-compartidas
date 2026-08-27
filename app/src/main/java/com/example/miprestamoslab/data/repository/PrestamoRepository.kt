@@ -10,4 +10,6 @@ interface PrestamoRepository {
     fun obtenerSolicitud(id: Int): SolicitudPrestamo?
     fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit>
     fun cancelarSolicitud(id: Int): Result<Unit>
+    fun aprobarSolicitud(id: Int): Result<Unit>
+    fun rechazarSolicitud(id: Int, razon: String): Result<Unit>
 }
