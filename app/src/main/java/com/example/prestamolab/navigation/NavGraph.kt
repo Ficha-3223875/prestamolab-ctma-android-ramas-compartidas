@@ -8,6 +8,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.prestamolab.ui.auth.LoginScreen
 import com.example.prestamolab.ui.catalogo.CatalogoScreen
 import com.example.prestamolab.ui.equipo.EquipoDetalleScreen
 import com.example.prestamolab.ui.misprestamos.MisSolicitudesScreen
@@ -24,8 +25,23 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = Destino.Catalogo.ruta
+        startDestination = Destino.Login.ruta
     ) {
+        // Pantalla de Autenticación (HU_15)
+        composable(Destino.Login.ruta) {
+            LoginScreen(
+                uiState = uiState,
+                onLoginClick = { correo, contrasena ->
+                    viewModel.login(correo, contrasena) {
+                        navController.navigate(Destino.Catalogo.ruta) {
+                            popUpTo(Destino.Login.ruta) { inclusive = true }
+                        }
+                    }
+                },
+                onLimpiarMensaje = { viewModel.limpiarMensajes() }
+            )
+        }
+
         // Pantalla 1: Catálogo de Equipos
         composable(Destino.Catalogo.ruta) {
             CatalogoScreen(

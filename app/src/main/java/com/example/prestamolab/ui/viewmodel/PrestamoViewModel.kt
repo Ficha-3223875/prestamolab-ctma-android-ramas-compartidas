@@ -2,7 +2,9 @@ package com.example.prestamolab.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.example.prestamolab.data.model.EstadoSolicitud
+import com.example.prestamolab.data.model.Rol
 import com.example.prestamolab.data.model.SolicitudPrestamo
+import com.example.prestamolab.data.model.Usuario
 import com.example.prestamolab.data.repository.PrestamoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,39 @@ class PrestamoViewModel(
         }
     }
 
+    // Autenticación (HU_15)
+    fun login(correo: String, contrasena: String, onSuccess: () -> Unit) {
+        if (correo.isBlank() || contrasena.isBlank()) {
+            _uiState.update { it.copy(mensajeError = "Por favor ingrese correo y contraseña") }
+            return
+        }
+
+        _uiState.update { it.copy(guardando = true, mensajeError = null) }
+
+        // Simulación de autenticación (Criterio 2)
+        if (contrasena == "123456") {
+            val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
+            val usuario = Usuario(
+                id = 1,
+                correo = correo,
+                nombre = "Usuario SENA",
+                rol = rolSimulado
+            )
+            _uiState.update {
+                it.copy(usuarioAutenticado = usuario, guardando = false, mensajeError = null)
+            }
+            onSuccess()
+        } else {
+            _uiState.update {
+                it.copy(guardando = false, mensajeError = "Usuario o contraseña inválidos")
+            }
+        }
+    }
+
+    fun logout() {
+        _uiState.update { it.copy(usuarioAutenticado = null) }
+    }
+
     // Reglas de negocio desacopladas (RN-02, RN-03, RN-04)
     fun ambienteValido(ambiente: String): Boolean = ambiente.trim().isNotEmpty()
     fun propositoValido(proposito: String): Boolean = proposito.trim().length in 10..180
@@ -40,7 +75,6 @@ class PrestamoViewModel(
         proposito: String,
         duracionHoras: Int
     ) {
-        // Prevenir doble ejecución mientras guarda
         if (_uiState.value.guardando) return
 
         if (!ambienteValido(ambienteDestino)) {

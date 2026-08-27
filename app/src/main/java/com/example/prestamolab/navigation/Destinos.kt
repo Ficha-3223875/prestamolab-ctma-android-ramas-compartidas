@@ -1,6 +1,7 @@
 package com.example.prestamolab.navigation
 
 sealed class Destino(val ruta: String) {
+    object Login : Destino("login")
     object Catalogo : Destino("catalogo")
     object MisSolicitudes : Destino("mis_solicitudes")
     object EquipoDetalle : Destino("equipo_detalle/{equipoId}") {
