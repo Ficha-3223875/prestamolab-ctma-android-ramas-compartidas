@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.prestamolabctma_2"
+    namespace = "com.example.prestamolab"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.prestamolabctma_2"
+        applicationId = "com.example.prestamolab"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -38,6 +38,7 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
