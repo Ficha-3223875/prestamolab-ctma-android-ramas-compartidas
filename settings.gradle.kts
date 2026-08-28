@@ -22,6 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MiPrestamosLab"
+rootProject.name = "prestamolab"
 include(":app")
- 
