@@ -14,9 +14,9 @@ class InMemoryPrestamoRepository {
 
     private val _equipos = MutableStateFlow<List<Equipo>>(
         listOf(
-            Equipo(1, "Osciloscopio Digital", CategoriaEquipo.HERRAMIENTAS, EstadoEquipo.DISPONIBLE),
-            Equipo(2, "Multímetro Fluke", CategoriaEquipo.HERRAMIENTAS, EstadoEquipo.DISPONIBLE),
-            Equipo(3, "Impresora 3D Ender", CategoriaEquipo.MAQUINARIA, EstadoEquipo.DISPONIBLE)
+            Equipo(1, "Osciloscopio Digital", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
+            Equipo(2, "Multímetro Fluke", CategoriaEquipo.HERRAMIENTA, EstadoEquipo.DISPONIBLE),
+            Equipo(3, "Impresora 3D Ender", CategoriaEquipo.OTRO, EstadoEquipo.DISPONIBLE)
         )
     )
     val equipos: StateFlow<List<Equipo>> = _equipos.asStateFlow()
