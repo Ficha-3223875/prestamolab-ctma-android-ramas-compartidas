@@ -42,7 +42,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
             return Result.failure(IllegalStateException("El equipo no está disponible"))
         }
 
-        // Evitar duplicados: verificar si ya existe solicitud activa para este equipo
         val existeActiva = _solicitudes.value.any {
             it.equipoId == solicitud.equipoId && it.estado != EstadoSolicitud.CANCELADA && it.estado != EstadoSolicitud.DEVUELTA && it.estado != EstadoSolicitud.RECHAZADA
         }
@@ -50,13 +49,11 @@ class InMemoryPrestamoRepository : PrestamoRepository {
             return Result.failure(IllegalStateException("Ya existe una solicitud activa para este equipo"))
         }
 
-        // Reservar equipo
         val nuevosEquipos = _equipos.value.map {
             if (it.id == solicitud.equipoId) it.copy(estado = EstadoEquipo.RESERVADO) else it
         }
         _equipos.value = nuevosEquipos
 
-        // Guardar solicitud con ID generado
         val solicitudFinal = solicitud.copy(id = nextSolicitudId++)
         _solicitudes.value = _solicitudes.value + solicitudFinal
 
@@ -71,13 +68,11 @@ class InMemoryPrestamoRepository : PrestamoRepository {
             return Result.failure(IllegalStateException("Solo se pueden cancelar solicitudes en estado SOLICITADA"))
         }
 
-        // Liberar equipo
         val nuevosEquipos = _equipos.value.map {
             if (it.id == solicitud.equipoId) it.copy(estado = EstadoEquipo.DISPONIBLE) else it
         }
         _equipos.value = nuevosEquipos
 
-        // Actualizar solicitud
         val nuevasSolicitudes = _solicitudes.value.map {
             if (it.id == id) it.copy(estado = EstadoSolicitud.CANCELADA) else it
         }
@@ -113,7 +108,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
             return Result.failure(IllegalArgumentException("Debes indicar una razón de rechazo válida"))
         }
 
-        // Liberar el equipo asociado
         _equipos.value = _equipos.value.map {
             if (it.id == solicitud.equipoId) it.copy(estado = EstadoEquipo.DISPONIBLE) else it
         }
@@ -125,4 +119,65 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
+    // --- SPRINT 4: GESTIÓN DE INVENTARIO ---
+
+    override fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
+        if (nombre.isBlank()) {
+            return Result.failure(IllegalArgumentException("El nombre del equipo no puede estar vacío"))
+        }
+
+        val nuevoId = (_equipos.value.maxOfOrNull { it.id } ?: 0) + 1
+        val nuevoEquipo = Equipo(
+            id = nuevoId,
+            nombre = nombre.trim(),
+            categoria = categoria,
+            estado = EstadoEquipo.DISPONIBLE,
+            descripcion = descripcion.trim()
+        )
+
+        _equipos.value = _equipos.value + nuevoEquipo
+        return Result.success(Unit)
+    }
+
+    override fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
+        val equipoExistente = _equipos.value.find { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
+
+        if (nombre.isBlank()) {
+            return Result.failure(IllegalArgumentException("El nombre del equipo no puede estar vacío"))
+        }
+
+        _equipos.value = _equipos.value.map { equipo ->
+            if (equipo.id == id) {
+                equipo.copy(
+                    nombre = nombre.trim(),
+                    categoria = categoria,
+                    descripcion = descripcion.trim()
+                )
+            } else {
+                equipo
+            }
+        }
+
+        return Result.success(Unit)
+    }
+
+    override fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> {
+        val equipoExistente = _equipos.value.find { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
+
+        if (equipoExistente.estado == EstadoEquipo.PRESTADO && (nuevoEstado == EstadoEquipo.EN_MANTENIMIENTO || nuevoEstado == EstadoEquipo.DADO_DE_BAJA)) {
+            return Result.failure(IllegalStateException("No se puede cambiar el estado de un equipo que se encuentra PRESTADO"))
+        }
+
+        _equipos.value = _equipos.value.map { equipo ->
+            if (equipo.id == id) {
+                equipo.copy(estado = nuevoEstado)
+            } else {
+                equipo
+            }
+        }
+
+        return Result.success(Unit)
+    }
 }
