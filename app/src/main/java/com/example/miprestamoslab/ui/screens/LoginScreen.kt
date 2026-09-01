@@ -1,4 +1,4 @@
-package com.example.prestamolab.ui.auth
+package com.example.miprestamoslab.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.example.prestamolab.ui.viewmodel.PrestamoUiState
+import com.example.miprestamoslab.ui.PrestamoUiState
 
 @Composable
 fun LoginScreen(

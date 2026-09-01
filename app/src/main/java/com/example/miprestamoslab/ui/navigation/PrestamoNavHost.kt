@@ -13,6 +13,7 @@ import com.example.miprestamoslab.ui.PrestamoViewModel
 import com.example.miprestamoslab.ui.screens.*
 
 sealed class Screen(val route: String) {
+    object Login : Screen("login")
     object Catalogo : Screen("catalogo")
     object EquipoDetalle : Screen("equipoDetalle/{equipoId}") {
         fun createRoute(equipoId: Int) = "equipoDetalle/$equipoId"
@@ -33,18 +34,39 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsState()
 
-    NavHost(navController = navController, startDestination = Screen.Catalogo.route) {
+    NavHost(navController = navController, startDestination = Screen.Login.route) {
+
+        composable(Screen.Login.route) {
+            LoginScreen(
+                uiState = uiState,
+                onLoginClick = { correo, contrasena ->
+                    viewModel.login(correo, contrasena) {
+                        navController.navigate(Screen.Catalogo.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                },
+                onLimpiarMensaje = { viewModel.limpiarMensaje() }
+            )
+        }
 
         composable(Screen.Catalogo.route) {
             CatalogoScreen(
                 equipos = uiState.equipos,
+                usuario = uiState.usuarioAutenticado,
                 onEquipoClick = { equipoId ->
                     navController.navigate(Screen.EquipoDetalle.createRoute(equipoId))
                 },
                 onVerMisSolicitudes = {
                     navController.navigate(Screen.MisSolicitudes.route)
                 },
-                onVerSolicitudesPendientes = { navController.navigate(Screen.SolicitudesPendientes.route) }
+                onVerSolicitudesPendientes = { navController.navigate(Screen.SolicitudesPendientes.route) },
+                onLogout = {
+                    viewModel.logout()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Catalogo.route) { inclusive = true }
+                    }
+                }
             )
         }
 

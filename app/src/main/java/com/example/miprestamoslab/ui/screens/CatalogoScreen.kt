@@ -6,30 +6,60 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.example.miprestamoslab.model.CategoriaEquipo
 import com.example.miprestamoslab.model.Equipo
 import com.example.miprestamoslab.model.EstadoEquipo
+import com.example.miprestamoslab.model.Rol
+import com.example.miprestamoslab.model.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogoScreen(
     equipos: List<Equipo>,
+    usuario: Usuario?,
     onEquipoClick: (Int) -> Unit,
     onVerMisSolicitudes: () -> Unit,
-    onVerSolicitudesPendientes: () -> Unit
+    onVerSolicitudesPendientes: () -> Unit,
+    onLogout: () -> Unit
 ) {
+    var textoBusqueda by remember { mutableStateOf("") }
+    var categoriaSeleccionada by remember { mutableStateOf<CategoriaEquipo?>(null) }
+    val esEncargado = usuario?.rol == Rol.ENCARGADO
+
+    val equiposFiltrados = equipos.filter { equipo ->
+        val coincideNombre = equipo.nombre.contains(textoBusqueda, ignoreCase = true)
+        val coincideCategoria = categoriaSeleccionada == null || equipo.categoria == categoriaSeleccionada
+        coincideNombre && coincideCategoria
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Catálogo de Equipos") },
+                title = {
+                    Column {
+                        Text("Catálogo de Equipos")
+                        usuario?.let {
+                            Text(
+                                text = "Hola, ${it.nombre} (${it.rol})",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                },
                 actions = {
-                    IconButton(onClick = onVerSolicitudesPendientes) {
-                        Icon(Icons.Default.List, contentDescription = "Solicitudes pendientes")
+                    if (esEncargado) {
+                        IconButton(onClick = onVerSolicitudesPendientes) {
+                            Icon(Icons.Default.List, contentDescription = "Solicitudes pendientes")
+                        }
+                    }
+                    TextButton(onClick = onLogout) {
+                        Text("Salir")
                     }
                 }
             )
@@ -38,18 +68,57 @@ fun CatalogoScreen(
             ExtendedFloatingActionButton(
                 onClick = onVerMisSolicitudes,
                 icon = { Icon(Icons.Default.List, contentDescription = null) },
-                text = { Text("Mis Solicitudes") }
+                text = { Text(if (esEncargado) "Historial" else "Mis Solicitudes") }
             )
         }
     ) { padding ->
-        if (equipos.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No hay equipos disponibles")
+        Column(modifier = Modifier.padding(padding)) {
+            OutlinedTextField(
+                value = textoBusqueda,
+                onValueChange = { textoBusqueda = it },
+                label = { Text("Buscar equipo...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                singleLine = true
+            )
+
+            ScrollableTabRow(
+                selectedTabIndex = if (categoriaSeleccionada == null) 0 else CategoriaEquipo.values()
+                    .indexOf(categoriaSeleccionada) + 1,
+                edgePadding = 16.dp,
+                divider = {},
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Tab(
+                    selected = categoriaSeleccionada == null,
+                    onClick = { categoriaSeleccionada = null },
+                    text = { Text("Todos") }
+                )
+                CategoriaEquipo.values().forEach { categoria ->
+                    Tab(
+                        selected = categoriaSeleccionada == categoria,
+                        onClick = { categoriaSeleccionada = categoria },
+                        text = { Text(categoria.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                    )
+                }
             }
-        } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
-                items(equipos, key = { it.id }) { equipo ->
-                    EquipoCard(equipo = equipo, onClick = { onEquipoClick(equipo.id) })
+
+            if (equiposFiltrados.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No se encontraron equipos con los criterios seleccionados",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(equiposFiltrados, key = { it.id }) { equipo ->
+                        EquipoCard(equipo = equipo, onClick = { onEquipoClick(equipo.id) })
+                    }
                 }
             }
         }

@@ -7,7 +7,9 @@ import com.example.miprestamoslab.domain.ambienteValido
 import com.example.miprestamoslab.domain.duracionValida
 import com.example.miprestamoslab.domain.propositoValido
 import com.example.miprestamoslab.model.EstadoSolicitud
+import com.example.miprestamoslab.model.Rol
 import com.example.miprestamoslab.model.SolicitudPrestamo
+import com.example.miprestamoslab.model.Usuario
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -26,6 +28,39 @@ class PrestamoViewModel(
                 _uiState.update { it.copy(equipos = combined.equipos, solicitudes = combined.solicitudes) }
             }
         }
+    }
+
+    // Autenticación (HU_15)
+    fun login(correo: String, contrasena: String, onSuccess: () -> Unit) {
+        if (correo.isBlank() || contrasena.isBlank()) {
+            _uiState.update { it.copy(mensajeError = "Por favor ingrese correo y contraseña") }
+            return
+        }
+
+        _uiState.update { it.copy(guardando = true, mensajeError = null) }
+
+        // Simulación de autenticación (Criterio 2)
+        if (contrasena == "123456") {
+            val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
+            val usuario = Usuario(
+                id = (1..100).random(),
+                correo = correo,
+                nombre = "Usuario SENA",
+                rol = rolSimulado
+            )
+            _uiState.update {
+                it.copy(usuarioAutenticado = usuario, guardando = false, mensajeError = null)
+            }
+            onSuccess()
+        } else {
+            _uiState.update {
+                it.copy(guardando = false, mensajeError = "Usuario o contraseña inválidos")
+            }
+        }
+    }
+
+    fun logout() {
+        _uiState.update { it.copy(usuarioAutenticado = null) }
     }
 
     fun cargarEquipo(equipoId: Int) {

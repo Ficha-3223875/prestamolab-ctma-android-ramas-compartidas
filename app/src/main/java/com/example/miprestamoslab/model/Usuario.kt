@@ -1,4 +1,4 @@
-package com.example.prestamolab.data.model
+package com.example.miprestamoslab.model
 
 enum class Rol {
     APRENDIZ,
