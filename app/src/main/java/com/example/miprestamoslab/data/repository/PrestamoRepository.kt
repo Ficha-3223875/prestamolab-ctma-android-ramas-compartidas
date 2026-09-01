@@ -1,7 +1,7 @@
-package com.example.prestamolabctma_2.data
+package com.example.miprestamoslab.data.repository
 
-import com.example.prestamolabctma_2.model.Equipo
-import com.example.prestamolabctma_2.model.SolicitudPrestamo
+import com.example.miprestamoslab.model.Equipo
+import com.example.miprestamoslab.model.SolicitudPrestamo
 
 interface PrestamoRepository {
     fun obtenerEquipos(): List<Equipo>
@@ -10,4 +10,6 @@ interface PrestamoRepository {
     fun obtenerSolicitud(id: Int): SolicitudPrestamo?
     fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit>
     fun cancelarSolicitud(id: Int): Result<Unit>
+    fun aprobarSolicitud(id: Int): Result<Unit>
+    fun rechazarSolicitud(id: Int, razon: String): Result<Unit>
 }

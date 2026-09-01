@@ -1,4 +1,4 @@
-package com.example.prestamolabctma_2.ui.theme
+package com.example.miprestamoslab.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

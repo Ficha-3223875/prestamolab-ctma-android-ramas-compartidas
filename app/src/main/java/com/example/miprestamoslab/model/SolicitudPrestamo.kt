@@ -1,4 +1,4 @@
-package com.example.prestamolabctma_2.model
+package com.example.miprestamoslab.model
 
 data class SolicitudPrestamo(
     val id: Int,
@@ -6,5 +6,6 @@ data class SolicitudPrestamo(
     val ambienteDestino: String,
     val proposito: String,
     val duracionHoras: Int,
-    val estado: EstadoSolicitud
+    val estado: EstadoSolicitud,
+    val razonRechazo: String? = null
 )

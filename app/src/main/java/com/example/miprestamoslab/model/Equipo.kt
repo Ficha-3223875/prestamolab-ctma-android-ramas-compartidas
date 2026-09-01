@@ -1,4 +1,4 @@
-package com.example.prestamolabctma_2.model
+package com.example.miprestamoslab.model
 
 data class Equipo(
     val id: Int,
