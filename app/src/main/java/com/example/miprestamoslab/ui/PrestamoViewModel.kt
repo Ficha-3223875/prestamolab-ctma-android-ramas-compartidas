@@ -6,6 +6,8 @@ import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
 import com.example.miprestamoslab.domain.ambienteValido
 import com.example.miprestamoslab.domain.duracionValida
 import com.example.miprestamoslab.domain.propositoValido
+import com.example.miprestamoslab.model.CategoriaEquipo
+import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.model.EstadoSolicitud
 import com.example.miprestamoslab.model.Rol
 import com.example.miprestamoslab.model.SolicitudPrestamo
@@ -139,6 +141,7 @@ class PrestamoViewModel(
                 _uiState.update { it.copy(mensaje = error.message ?: "Error al cancelar solicitud") }
             }
     }
+
     fun aprobarSolicitud(solicitudId: Int) {
         repository.aprobarSolicitud(solicitudId)
             .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente") } }
@@ -149,5 +152,47 @@ class PrestamoViewModel(
         repository.rechazarSolicitud(solicitudId, razon)
             .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente") } }
             .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud") } }
+    }
+
+    // --- SPRINT 3: GESTIÓN DE PRESTAMOS FISICOS (HU 8, HU 9) ---
+
+    fun registrarEntregaFisica(solicitudId: Int) {
+        repository.registrarEntregaFisica(solicitudId)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Entrega física registrada correctamente.") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar entrega.") } }
+    }
+
+    fun registrarDevolucion(solicitudId: Int) {
+        repository.registrarDevolucion(solicitudId)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Devolución registrada correctamente.") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar devolución.") } }
+    }
+
+    // --- SPRINT 4: GESTIÓN DE INVENTARIO (HU 10, HU 11, HU 12) ---
+
+    fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String) {
+        if (nombre.isBlank()) {
+            _uiState.update { it.copy(mensaje = "El nombre del equipo no puede estar vacío.") }
+            return
+        }
+        repository.agregarEquipo(nombre, categoria, descripcion)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Equipo agregado exitosamente.") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar el equipo.") } }
+    }
+
+    fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String) {
+        if (nombre.isBlank()) {
+            _uiState.update { it.copy(mensaje = "El nombre del equipo no puede estar vacío.") }
+            return
+        }
+        repository.editarEquipo(id, nombre, categoria, descripcion)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente.") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar el equipo.") } }
+    }
+
+    fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo) {
+        repository.cambiarEstadoEquipo(id, nuevoEstado)
+            .onSuccess { _uiState.update { it.copy(mensaje = "Estado del equipo actualizado.") } }
+            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar el estado del equipo.") } }
     }
 }
