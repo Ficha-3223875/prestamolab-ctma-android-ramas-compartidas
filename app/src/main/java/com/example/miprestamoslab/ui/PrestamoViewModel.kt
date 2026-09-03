@@ -6,8 +6,12 @@ import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
 import com.example.miprestamoslab.domain.ambienteValido
 import com.example.miprestamoslab.domain.duracionValida
 import com.example.miprestamoslab.domain.propositoValido
+import com.example.miprestamoslab.model.CategoriaEquipo
+import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.model.EstadoSolicitud
+import com.example.miprestamoslab.model.Rol
 import com.example.miprestamoslab.model.SolicitudPrestamo
+import com.example.miprestamoslab.model.Usuario
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -26,6 +30,38 @@ class PrestamoViewModel(
                 _uiState.update { it.copy(equipos = combined.equipos, solicitudes = combined.solicitudes) }
             }
         }
+    }
+
+    // Autenticación (HU_15)
+    fun login(correo: String, contrasena: String, onSuccess: () -> Unit) {
+        if (correo.isBlank() || contrasena.isBlank()) {
+            _uiState.update { it.copy(mensajeError = "Por favor ingrese correo y contraseña") }
+            return
+        }
+
+        _uiState.update { it.copy(guardando = true, mensajeError = null) }
+
+        if (contrasena == "123456") {
+            val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
+            val usuario = Usuario(
+                id = (1..100).random(),
+                correo = correo,
+                nombre = "Usuario SENA",
+                rol = rolSimulado
+            )
+            _uiState.update {
+                it.copy(usuarioAutenticado = usuario, guardando = false, mensajeError = null)
+            }
+            onSuccess()
+        } else {
+            _uiState.update {
+                it.copy(guardando = false, mensajeError = "Usuario o contraseña inválidos")
+            }
+        }
+    }
+
+    fun logout() {
+        _uiState.update { it.copy(usuarioAutenticado = null) }
     }
 
     fun cargarEquipo(equipoId: Int) {
@@ -53,7 +89,6 @@ class PrestamoViewModel(
         duracion: String,
         onSuccess: () -> Unit
     ) {
-        // Validaciones
         val errores = mutableListOf<String>()
         if (!ambienteValido(ambiente)) errores.add("El ambiente o destino es obligatorio.")
         if (!propositoValido(proposito)) errores.add("El propósito debe tener entre 10 y 180 caracteres.")
@@ -65,13 +100,12 @@ class PrestamoViewModel(
             return
         }
 
-        // Evitar doble pulsación
         if (_uiState.value.guardando) return
 
         _uiState.update { it.copy(guardando = true) }
 
         val solicitud = SolicitudPrestamo(
-            id = 0, // Se asigna en repositorio
+            id = 0,
             equipoId = equipoId,
             ambienteDestino = ambiente.trim(),
             proposito = proposito.trim(),
@@ -104,6 +138,7 @@ class PrestamoViewModel(
                 _uiState.update { it.copy(mensaje = error.message ?: "Error al cancelar solicitud") }
             }
     }
+
     fun aprobarSolicitud(solicitudId: Int) {
         repository.aprobarSolicitud(solicitudId)
             .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente") } }
@@ -114,5 +149,40 @@ class PrestamoViewModel(
         repository.rechazarSolicitud(solicitudId, razon)
             .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente") } }
             .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud") } }
+    }
+
+    // --- SPRINT 4: GESTIÓN DE INVENTARIO (HU 10, HU 11, HU 12) ---
+
+    fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
+        repository.agregarEquipo(nombre, categoria, descripcion)
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Equipo agregado correctamente") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar equipo") }
+            }
+    }
+
+    fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
+        repository.editarEquipo(id, nombre, categoria, descripcion)
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar equipo") }
+            }
+    }
+
+    fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo, onSuccess: () -> Unit = {}) {
+        repository.cambiarEstadoEquipo(id, nuevoEstado)
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Estado del equipo actualizado a $nuevoEstado") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado") }
+            }
     }
 }

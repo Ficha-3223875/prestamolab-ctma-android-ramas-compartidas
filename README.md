@@ -10,46 +10,223 @@
 
 ---
 
-## 2. Historias de Usuario y Criterios de Aceptación
+# Historias de Usuario
 
-### HU-01: Consultar Catálogo
-* **Descripción:** Como usuario, quiero ver la lista de equipos con su disponibilidad para saber qué recursos puedo solicitar.
-* **Criterio de Aceptación:** Dado un usuario en la pantalla principal, cuando la app carga, se muestra el listado de equipos con su estado (`DISPONIBLE`, `RESERVADO`, `PRESTADO`).
+## HU-01 - Autenticación de Usuario
 
-### HU-02: Registrar Solicitud
-* **Descripción:** Como usuario, quiero llenar un formulario para solicitar un equipo disponible.
-* **Criterio de Aceptación:** Dado un equipo `DISPONIBLE` y un formulario válido (ambiente no vacío, propósito entre 10 y 180 caracteres y duración entre 1 y 8 horas), cuando el usuario pulsa *Confirmar Solicitud*, se crea una sola solicitud en estado `SOLICITADA` y el equipo pasa a `RESERVADO`.
+**Como** usuario del laboratorio,
+**quiero** iniciar sesión con mis credenciales,
+**para** acceder a los servicios de préstamo de equipos.
 
-### HU-03: Validación de Formulario
-* **Descripción:** Como usuario, quiero que la app valide mis datos para evitar errores de envío.
-* **Criterio de Aceptación:** Dado un propósito de menos de 10 caracteres, cuando el usuario intenta enviar, la app inhabilita la acción y muestra un mensaje de error sin modificar el estado del equipo.
+### Criterios de aceptación
 
-### HU-04: Evitar Duplicados
-* **Descripción:** Como usuario, quiero evitar solicitudes duplicadas si presiono accidentalmente dos veces el botón de envío.
-* **Criterio de Aceptación:** Dado un formulario válido en proceso de envío, cuando se registra la acción, la app bloquea reintentos simultáneos y genera únicamente una (1) solicitud.
+* **CA-01.1:** El sistema debe validar las credenciales ingresadas contra el repositorio de usuarios registrados.
+* **CA-01.2:** Si las credenciales son incorrectas o están vacías, se debe mostrar un mensaje de error indicando la falla.
+* **CA-01.3:** Al autenticarse correctamente, el sistema debe redirigir al usuario a la vista principal del catálogo según su rol.
 
-### HU-05: Consultar Mis Solicitudes
-* **Descripción:** Como usuario, quiero ver el historial de mis solicitudes para hacerles seguimiento.
-* **Criterio de Aceptación:** Dado un usuario que ha realizado una solicitud, al navegar a "Mis Solicitudes", la solicitud aparece listada mostrando equipo, ambiente, propósito, duración y estado actual.
+### Riesgos relacionados
 
-### HU-06: Cancelar Solicitud
-* **Descripción:** Como usuario, quiero poder cancelar una solicitud activa que ya no necesite.
-* **Criterio de Aceptación:** Dada una solicitud en estado `SOLICITADA`, cuando el usuario presiona *Cancelar Solicitud*, la solicitud cambia a estado `CANCELADA` y el equipo asociado vuelve a estar `DISPONIBLE` en el catálogo.
+* R-01
+
+### Casos de prueba relacionados
+
+* TC-01
+* TC-02
 
 ---
 
-## 3. Matriz de Riesgos
+## HU-02 - Visualización y Filtrado del Catálogo de Equipos
 
-| ID | Riesgo | Prob. | Impacto | Nivel | Cobertura / Estrategia |
-|---|---|---|---|---|---|
-| R-01 | Dos solicitudes activas reservan el mismo equipo | Alta | Alta | Crítico | TC de disponibilidad + prevención de duplicados. |
-| R-02 | Datos fuera de rango son aceptados (propósito < 10 o duración > 8) | Alta | Media | Alto | Partición de equivalencia + valores límite. |
-| R-03 | ID inexistente o nulo provoca cierre abrupto de la app | Media | Alta | Alto | Navegación negativa y manejo de nulos. |
-| R-04 | El catálogo no refleja el cambio de estado tras crear/cancelar | Media | Alta | Alto | Pruebas de flujo de estado + regresión. |
-| R-05 | Las acciones o botones desaparecen con tamaño de fuente al 1.5× | Media | Media | Medio | Prueba de accesibilidad y layouts adaptables. |
+**Como** usuario,
+**quiero** consultar el catálogo de equipos disponibles y filtrarlos por categoría o búsqueda de texto,
+**para** encontrar lo que necesito rápidamente.
+
+### Criterios de aceptación
+
+* **CA-02.1:** El catálogo debe mostrar la lista de equipos registrados con su foto, nombre, categoría y disponibilidad.
+* **CA-02.2:** El usuario debe poder filtrar la lista seleccionando categorías específicas (ej. Laptops, Cámaras, Herramientas).
+* **CA-02.3:** La búsqueda por texto debe actualizar dinámicamente el catálogo según las coincidencias en el nombre del equipo.
+
+### Riesgos relacionados
+
+* R-02
+* R-03
+
+### Casos de prueba relacionados
+
+* TC-03
+* TC-04
 
 ---
 
-### 4. Sprint Planning y DoD
+## HU-03 - Consulta de Detalle del Equipo
 
-* **Sprint Goal:** Permita consultar un equipo disponible y registrar una solicitud de préstamo válida, manteniendo la disponibilidad coherente y demostrando su calidad mediante pruebas reproducibles.
+**Como** usuario,
+**quiero** ver la información detallada de un equipo,
+**para** conocer sus especificaciones antes de solicitarlo.
+
+### Criterios de aceptación
+
+* **CA-03.1:** Al seleccionar un equipo del catálogo, se debe abrir la pantalla con la descripción completa, número de serie y estado actual.
+* **CA-03.2:** Si el equipo está disponible, la pantalla debe incluir un acceso directo para iniciar la solicitud de préstamo.
+
+### Riesgos relacionados
+
+* R-04
+
+### Casos de prueba relacionados
+
+* TC-05
+
+---
+
+## HU-04 - Validación de Disponibilidad para Préstamo
+
+**Como** usuario,
+**quiero** que el sistema me impida solicitar equipos no disponibles,
+**para** evitar solicitudes inválidas.
+
+### Criterios de aceptación
+
+* **CA-04.1:** Si el equipo tiene estado **"Disponible"**, se debe habilitar la opción de préstamo.
+* **CA-04.2:** Si el equipo tiene estado **"En préstamo"** o **"En mantenimiento"**, el botón de solicitud debe permanecer deshabilitado.
+
+### Riesgos relacionados
+
+* R-05
+
+### Casos de prueba relacionados
+
+* TC-06
+* TC-07
+
+---
+
+## HU-05 - Formulario y Creación de Solicitud de Préstamo
+
+**Como** usuario,
+**quiero** diligenciar un formulario con el motivo y la fecha de devolución,
+**para** formalizar mi pedido de equipo.
+
+### Criterios de aceptación
+
+* **CA-05.1:** El formulario debe requerir el motivo del préstamo y la fecha estimativa de devolución.
+* **CA-05.2:** El botón de confirmación debe permanecer desactivado hasta que todos los campos requeridos contengan datos válidos.
+* **CA-05.3:** Al enviar la solicitud, esta se debe registrar con estado **"Pendiente"** y mostrar un mensaje de confirmación al usuario.
+
+### Riesgos relacionados
+
+* R-06
+* R-07
+
+### Casos de prueba relacionados
+
+* TC-08
+* TC-09
+
+---
+
+## HU-06 - Seguimiento de Mis Solicitudes
+
+**Como** usuario,
+**quiero** ver el listado de mis solicitudes realizadas,
+**para** conocer su estado actual (Pendiente, Aprobada, Rechazada).
+
+### Criterios de aceptación
+
+* **CA-06.1:** La vista **"Mis Solicitudes"** debe listar únicamente las solicitudes asociadas al usuario autenticado.
+* **CA-06.2:** Cada elemento de la lista debe mostrar el equipo, la fecha de solicitud, el motivo y una etiqueta indicando el estado.
+
+### Riesgos relacionados
+
+* R-08
+
+### Casos de prueba relacionados
+
+* TC-10
+
+---
+
+## HU-07 - Panel de Solicitudes Pendientes para Administrador
+
+**Como** administrador del laboratorio,
+**quiero** revisar el listado de solicitudes pendientes de todos los usuarios,
+**para** gestionar sus aprobaciones.
+
+### Criterios de aceptación
+
+* **CA-07.1:** La vista debe ser accesible únicamente para usuarios con rol de **Administrador**.
+* **CA-07.2:** Debe listar todas las solicitudes entrantes que estén en estado **"Pendiente"**, ordenadas secuencialmente.
+
+### Riesgos relacionados
+
+* R-09
+
+### Casos de prueba relacionados
+
+* TC-11
+
+---
+
+## HU-08 - Aprobación y Rechazo de Solicitudes
+
+**Como** administrador,
+**quiero** aprobar o rechazar las solicitudes de préstamo,
+**para** controlar el flujo de entrega del laboratorio.
+
+### Criterios de aceptación
+
+* **CA-08.1:** Al presionar **"Aprobar"**, la solicitud pasa a estado **"Aprobada"** y el equipo cambia automáticamente a **"En préstamo"**.
+* **CA-08.2:** Al presionar **"Rechazar"**, la solicitud pasa a estado **"Rechazada"** y el equipo se mantiene **"Disponible"**.
+
+### Riesgos relacionados
+
+* R-05
+* R-09
+
+### Casos de prueba relacionados
+
+* TC-12
+* TC-13
+
+---
+
+## HU-09 - Gestión del Inventario de Equipos
+
+**Como** administrador,
+**quiero** agregar, editar o cambiar el estado de los equipos en el inventario,
+**para** mantener la lista actualizada.
+
+### Criterios de aceptación
+
+* **CA-09.1:** Permite registrar un nuevo equipo definiendo su nombre, categoría, descripción y estado inicial.
+* **CA-09.2:** Permite modificar la información existente o actualizar el estado del equipo manualmente (Disponible/Mantenimiento).
+
+### Riesgos relacionados
+
+* R-10
+
+### Casos de prueba relacionados
+
+* TC-14
+
+---
+
+## HU-10 - Cierre de Sesión
+
+**Como** usuario,
+**quiero** cerrar mi sesión de forma segura,
+**para** proteger mis datos en dispositivos compartidos.
+
+### Criterios de aceptación
+
+* **CA-10.1:** Debe existir un botón accesible de cierre de sesión en la barra de navegación superior.
+* **CA-10.2:** Al confirmar el cierre, se debe limpiar el estado del usuario activo y redirigir a la pantalla de **Login**.
+
+### Riesgos relacionados
+
+* R-01
+
+### Casos de prueba relacionados
+
+* TC-15
