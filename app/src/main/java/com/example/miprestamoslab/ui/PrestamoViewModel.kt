@@ -30,6 +30,7 @@ class PrestamoViewModel(
         }
     }
 
+    // Autenticación (HU_15)
     fun login(correo: String, contrasena: String, onSuccess: () -> Unit) {
         if (correo.isBlank() || contrasena.isBlank()) {
             _uiState.update { it.copy(mensajeError = "Por favor ingrese correo y contraseña") }
@@ -38,6 +39,7 @@ class PrestamoViewModel(
 
         _uiState.update { it.copy(guardando = true, mensajeError = null) }
 
+        // Simulación de autenticación (Criterio 2)
         if (contrasena == "123456") {
             val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
             val usuario = Usuario(
@@ -86,6 +88,7 @@ class PrestamoViewModel(
         duracion: String,
         onSuccess: () -> Unit
     ) {
+        // Validaciones
         val errores = mutableListOf<String>()
         if (!ambienteValido(ambiente)) errores.add("El ambiente o destino es obligatorio.")
         if (!propositoValido(proposito)) errores.add("El propósito debe tener entre 10 y 180 caracteres.")
@@ -97,12 +100,13 @@ class PrestamoViewModel(
             return
         }
 
+        // Evitar doble pulsación
         if (_uiState.value.guardando) return
 
         _uiState.update { it.copy(guardando = true) }
 
         val solicitud = SolicitudPrestamo(
-            id = 0,
+            id = 0, // Se asigna en repositorio
             equipoId = equipoId,
             ambienteDestino = ambiente.trim(),
             proposito = proposito.trim(),
@@ -135,7 +139,6 @@ class PrestamoViewModel(
                 _uiState.update { it.copy(mensaje = error.message ?: "Error al cancelar solicitud") }
             }
     }
-
     fun aprobarSolicitud(solicitudId: Int) {
         repository.aprobarSolicitud(solicitudId)
             .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente") } }
@@ -146,19 +149,5 @@ class PrestamoViewModel(
         repository.rechazarSolicitud(solicitudId, razon)
             .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente") } }
             .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud") } }
-    }
-
-    // HU_08: Registrar entrega física
-    fun registrarEntregaFisica(solicitudId: Int) {
-        repository.registrarEntregaFisica(solicitudId)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Entrega física registrada correctamente") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar entrega") } }
-    }
-
-    // HU_09: Registrar devolución
-    fun registrarDevolucion(solicitudId: Int) {
-        repository.registrarDevolucion(solicitudId)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Devolución registrada correctamente") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar devolución") } }
     }
 }
