@@ -1,4 +1,4 @@
-# PréstamoLab CTMA
+ # PréstamoLab CTMA
 
 ## 1. Descubrimiento y Product Goal
 * **Problema:** Falta de visibilidad y control sobre la disponibilidad, préstamos activos y devoluciones de equipos y herramientas compartidas en los laboratorios del CTMA.
@@ -52,3 +52,16 @@
 
 
 * **Sprint Goal:** Permita consultar un equipo disponible y registrar una solicitud de préstamo válida, manteniendo la disponibilidad coherente y demostrando su calidad mediante pruebas reproducibles.
+
+
+## 👤 Contribuciones de Juan Daniel Paniagua Tapias
+
+### 🚀 Historias de Usuario Desarrolladas
+
+| Historia de Usuario | Commit / PR | Descripción de la Implementación |
+| :--- | :--- | :--- |
+| **HU-15: Login y Autenticación** | `f78ed7a` | Implementación de la pantalla de inicio de sesión, UI State en Compose y lógica para validación de credenciales de usuario. |
+| **Gestión de Solicitudes Pendientes** | `1022fbc` (PR #17) | Integración de accesos directos y botones de navegación en el panel lateral (*Navigation Drawer*) para gestionar solicitudes pendientes. |
+
+### 🛠️ Tareas Técnicas y Mantenimiento
+* **Integración de Ramas & Control de Versiones (`8ba6278`, `36cf28c`):** Sincronización de cambios remotos, resolución de conflictos de *merge* e integración del Sprint 4 (módulo de gestión de inventario: HU10, HU11, HU12).
