@@ -10,45 +10,21 @@
 
 ---
 
-## 2. Historias de Usuario y Criterios de Aceptación
+### Historias de Usuario (Sprint 4 - Gestión de Inventario)
 
-### HU-01: Consultar Catálogo
-* **Descripción:** Como usuario, quiero ver la lista de equipos con su disponibilidad para saber qué recursos puedo solicitar.
-* **Criterio de Aceptación:** Dado un usuario en la pantalla principal, cuando la app carga, se muestra el listado de equipos con su estado (`DISPONIBLE`, `RESERVADO`, `PRESTADO`).
+| ID | Historia de Usuario | Descripción | Criterios de Aceptación |
+| :--- | :--- | :--- | :--- |
+| **HU 10** | Registrar Nuevo Equipo | Permitir al encargado agregar nuevos equipos al catálogo. | • Formulario exclusivo para el Encargado.<br>• Validar campos obligatorios (Nombre, Categoría, Descripción).<br>• Insertar el nuevo equipo con estado "Disponible". |
+| **HU 11** | Editar Información de Equipo | Permitir al encargado actualizar datos de equipos existentes. | • Modificar nombre, categoría y descripción.<br>• Reflejar los cambios inmediatamente en el estado del repositorio.<br>• Mantener la integridad de los IDs. |
+| **HU 12** | Gestión de Estado e Inhabilitación | Cambiar el estado administrativo de los equipos del inventario. | • Permitir cambiar a "En Mantenimiento" o "Dado de Baja".<br>• Validar que el equipo NO esté prestado actualmente al inhabilitarlo.<br>• Permitir reactivar equipos a estado "Disponible". |
 
-### HU-02: Registrar Solicitud
-* **Descripción:** Como usuario, quiero llenar un formulario para solicitar un equipo disponible.
-* **Criterio de Aceptación:** Dado un equipo `DISPONIBLE` y un formulario válido (ambiente no vacío, propósito entre 10 y 180 caracteres y duración entre 1 y 8 horas), cuando el usuario pulsa *Confirmar Solicitud*, se crea una sola solicitud en estado `SOLICITADA` y el equipo pasa a `RESERVADO`.
+### Riesgos Asociados al Sprint 4
 
-### HU-03: Validación de Formulario
-* **Descripción:** Como usuario, quiero que la app valide mis datos para evitar errores de envío.
-* **Criterio de Aceptación:** Dado un propósito de menos de 10 caracteres, cuando el usuario intenta enviar, la app inhabilita la acción y muestra un mensaje de error sin modificar el estado del equipo.
-
-### HU-04: Evitar Duplicados
-* **Descripción:** Como usuario, quiero evitar solicitudes duplicadas si presiono accidentalmente dos veces el botón de envío.
-* **Criterio de Aceptación:** Dado un formulario válido en proceso de envío, cuando se registra la acción, la app bloquea reintentos simultáneos y genera únicamente una (1) solicitud.
-
-### HU-05: Consultar Mis Solicitudes
-* **Descripción:** Como usuario, quiero ver el historial de mis solicitudes para hacerles seguimiento.
-* **Criterio de Aceptación:** Dado un usuario que ha realizado una solicitud, al navegar a "Mis Solicitudes", la solicitud aparece listada mostrando equipo, ambiente, propósito, duración y estado actual.
-
-### HU-06: Cancelar Solicitud
-* **Descripción:** Como usuario, quiero poder cancelar una solicitud activa que ya no necesite.
-* **Criterio de Aceptación:** Dada una solicitud en estado `SOLICITADA`, cuando el usuario presiona *Cancelar Solicitud*, la solicitud cambia a estado `CANCELADA` y el equipo asociado vuelve a estar `DISPONIBLE` en el catálogo.
-
----
-
-## 3. Matriz de Riesgos
-
-| ID | Riesgo | Prob. | Impacto | Nivel | Cobertura / Estrategia |
-|---|---|---|---|---|---|
-| R-01 | Dos solicitudes activas reservan el mismo equipo | Alta | Alta | Crítico | TC de disponibilidad + prevención de duplicados. |
-| R-02 | Datos fuera de rango son aceptados (propósito < 10 o duración > 8) | Alta | Media | Alto | Partición de equivalencia + valores límite. |
-| R-03 | ID inexistente o nulo provoca cierre abrupto de la app | Media | Alta | Alto | Navegación negativa y manejo de nulos. |
-| R-04 | El catálogo no refleja el cambio de estado tras crear/cancelar | Media | Alta | Alto | Pruebas de flujo de estado + regresión. |
-| R-05 | Las acciones o botones desaparecen con tamaño de fuente al 1.5× | Media | Media | Medio | Prueba de accesibilidad y layouts adaptables. |
-
----
+| ID Riesgo | Riesgo | HU Asociada |
+| :--- | :--- | :--- |
+| **R-08** | Inconsistencia en stock por no liberar equipo devuelto o inhabilitado | HU 12 (Gestión de Estado e Inhabilitación) |
+| **R-09** | Acceso no autorizado a vistas administrativas de inventario | HU 10 (Registrar Nuevo Equipo) |
+| **R-15** | Desincronización de datos de inventario al trabajar en memoria sin API | HU 12 (Gestión de Estado e Inhabilitación) |
 
 ### 4. Sprint Planning y DoD
 
