@@ -41,7 +41,6 @@ class PrestamoViewModel(
 
         _uiState.update { it.copy(guardando = true, mensajeError = null) }
 
-        // Simulación de autenticación (Criterio 2)
         if (contrasena == "123456") {
             val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
             val usuario = Usuario(
@@ -90,7 +89,6 @@ class PrestamoViewModel(
         duracion: String,
         onSuccess: () -> Unit
     ) {
-        // Validaciones
         val errores = mutableListOf<String>()
         if (!ambienteValido(ambiente)) errores.add("El ambiente o destino es obligatorio.")
         if (!propositoValido(proposito)) errores.add("El propósito debe tener entre 10 y 180 caracteres.")
@@ -102,13 +100,12 @@ class PrestamoViewModel(
             return
         }
 
-        // Evitar doble pulsación
         if (_uiState.value.guardando) return
 
         _uiState.update { it.copy(guardando = true) }
 
         val solicitud = SolicitudPrestamo(
-            id = 0, // Se asigna en repositorio
+            id = 0,
             equipoId = equipoId,
             ambienteDestino = ambiente.trim(),
             proposito = proposito.trim(),
@@ -154,45 +151,38 @@ class PrestamoViewModel(
             .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud") } }
     }
 
-    // --- SPRINT 3: GESTIÓN DE PRESTAMOS FISICOS (HU 8, HU 9) ---
-
-    fun registrarEntregaFisica(solicitudId: Int) {
-        repository.registrarEntregaFisica(solicitudId)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Entrega física registrada correctamente.") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar entrega.") } }
-    }
-
-    fun registrarDevolucion(solicitudId: Int) {
-        repository.registrarDevolucion(solicitudId)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Devolución registrada correctamente.") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar devolución.") } }
-    }
-
     // --- SPRINT 4: GESTIÓN DE INVENTARIO (HU 10, HU 11, HU 12) ---
 
-    fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String) {
-        if (nombre.isBlank()) {
-            _uiState.update { it.copy(mensaje = "El nombre del equipo no puede estar vacío.") }
-            return
-        }
+    fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
         repository.agregarEquipo(nombre, categoria, descripcion)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Equipo agregado exitosamente.") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar el equipo.") } }
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Equipo agregado correctamente") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar equipo") }
+            }
     }
 
-    fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String) {
-        if (nombre.isBlank()) {
-            _uiState.update { it.copy(mensaje = "El nombre del equipo no puede estar vacío.") }
-            return
-        }
+    fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
         repository.editarEquipo(id, nombre, categoria, descripcion)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente.") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar el equipo.") } }
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar equipo") }
+            }
     }
 
-    fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo) {
+    fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo, onSuccess: () -> Unit = {}) {
         repository.cambiarEstadoEquipo(id, nuevoEstado)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Estado del equipo actualizado.") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar el estado del equipo.") } }
+            .onSuccess {
+                _uiState.update { it.copy(mensaje = "Estado del equipo actualizado a $nuevoEstado") }
+                onSuccess()
+            }
+            .onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado") }
+            }
     }
 }

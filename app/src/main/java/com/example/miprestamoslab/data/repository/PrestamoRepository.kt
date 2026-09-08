@@ -15,8 +15,8 @@ interface PrestamoRepository {
     fun aprobarSolicitud(id: Int): Result<Unit>
     fun rechazarSolicitud(id: Int, razon: String): Result<Unit>
 
-    // Sprint 4: Gestión de Inventario
-    fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit>
-    fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit>
-    fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit>
+    // --- SPRINT 4: GESTIÓN DE INVENTARIO ---
+    fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> // HU 10
+    fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> // HU 11
+    fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> // HU 12
 }

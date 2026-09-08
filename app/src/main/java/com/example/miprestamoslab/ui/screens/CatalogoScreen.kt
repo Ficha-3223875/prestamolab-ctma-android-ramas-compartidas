@@ -84,7 +84,7 @@ fun CatalogoScreen(
             )
 
             ScrollableTabRow(
-                selectedTabIndex = if (categoriaSeleccionada == null) 0 else CategoriaEquipo.entries
+                selectedTabIndex = if (categoriaSeleccionada == null) 0 else CategoriaEquipo.values()
                     .indexOf(categoriaSeleccionada) + 1,
                 edgePadding = 16.dp,
                 divider = {},
@@ -95,7 +95,7 @@ fun CatalogoScreen(
                     onClick = { categoriaSeleccionada = null },
                     text = { Text("Todos") }
                 )
-                CategoriaEquipo.entries.forEach { categoria ->
+                CategoriaEquipo.values().forEach { categoria ->
                     Tab(
                         selected = categoriaSeleccionada == categoria,
                         onClick = { categoriaSeleccionada = categoria },

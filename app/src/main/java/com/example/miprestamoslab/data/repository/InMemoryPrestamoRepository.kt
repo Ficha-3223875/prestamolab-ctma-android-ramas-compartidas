@@ -1,14 +1,9 @@
 package com.example.miprestamoslab.data.repository
 
-import com.example.miprestamoslab.model.CategoriaEquipo
-import com.example.miprestamoslab.model.Equipo
-import com.example.miprestamoslab.model.EstadoEquipo
-import com.example.miprestamoslab.model.EstadoSolicitud
-import com.example.miprestamoslab.model.SolicitudPrestamo
+import com.example.miprestamoslab.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 
 class InMemoryPrestamoRepository : PrestamoRepository {
 
@@ -30,7 +25,6 @@ class InMemoryPrestamoRepository : PrestamoRepository {
     val solicitudes: StateFlow<List<SolicitudPrestamo>> = _solicitudes.asStateFlow()
 
     private var nextSolicitudId = 1
-    private var nextEquipoId = 9
 
     override fun obtenerEquipos(): List<Equipo> = _equipos.value
 
@@ -49,10 +43,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         }
 
         val existeActiva = _solicitudes.value.any {
-            it.equipoId == solicitud.equipoId &&
-                    it.estado != EstadoSolicitud.CANCELADA &&
-                    it.estado != EstadoSolicitud.DEVUELTA &&
-                    it.estado != EstadoSolicitud.RECHAZADA
+            it.equipoId == solicitud.equipoId && it.estado != EstadoSolicitud.CANCELADA && it.estado != EstadoSolicitud.DEVUELTA && it.estado != EstadoSolicitud.RECHAZADA
         }
         if (existeActiva) {
             return Result.failure(IllegalStateException("Ya existe una solicitud activa para este equipo"))
@@ -128,68 +119,65 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    // HU_08: Registrar entrega física
-    fun registrarEntregaFisica(solicitudId: Int): Result<Unit> {
-        val solicitud = obtenerSolicitud(solicitudId)
-            ?: return Result.failure(Exception("Solicitud no encontrada"))
+    // --- SPRINT 4: GESTIÓN DE INVENTARIO ---
 
-        if (solicitud.estado != EstadoSolicitud.APROBADA) {
-            return Result.failure(Exception("Solo se pueden entregar solicitudes en estado APROBADA"))
-        }
-
-        _solicitudes.update { lista ->
-            lista.map { if (it.id == solicitudId) it.copy(estado = EstadoSolicitud.ENTREGADA) else it }
-        }
-        return Result.success(Unit)
-    }
-
-    // HU_09: Registrar devolución
-    fun registrarDevolucion(solicitudId: Int): Result<Unit> {
-        val solicitud = obtenerSolicitud(solicitudId)
-            ?: return Result.failure(Exception("Solicitud no encontrada"))
-
-        if (solicitud.estado != EstadoSolicitud.ENTREGADA) {
-            return Result.failure(Exception("Solo se pueden devolver solicitudes en estado ENTREGADA"))
-        }
-
-        // Modificación lógica: Liberar el equipo asignado a la solicitud
-        _equipos.update { lista ->
-            lista.map { if (it.id == solicitud.equipoId) it.copy(estado = EstadoEquipo.DISPONIBLE) else it }
-        }
-
-        _solicitudes.update { lista ->
-            lista.map { if (it.id == solicitudId) it.copy(estado = EstadoSolicitud.DEVUELTA) else it }
-        }
-        return Result.success(Unit)
-    }
-
-    // SPRINT 4: GESTIÓN DE INVENTARIO (HU 10, HU 11, HU 12)
     override fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
+        if (nombre.isBlank()) {
+            return Result.failure(IllegalArgumentException("El nombre del equipo no puede estar vacío"))
+        }
+
+        val nuevoId = (_equipos.value.maxOfOrNull { it.id } ?: 0) + 1
         val nuevoEquipo = Equipo(
-            id = nextEquipoId++,
-            nombre = nombre,
+            id = nuevoId,
+            nombre = nombre.trim(),
             categoria = categoria,
-            estado = EstadoEquipo.DISPONIBLE
+            estado = EstadoEquipo.DISPONIBLE,
+            descripcion = descripcion.trim()
         )
-        _equipos.update { it + nuevoEquipo }
+
+        _equipos.value = _equipos.value + nuevoEquipo
         return Result.success(Unit)
     }
 
     override fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
-        _equipos.update { lista ->
-            lista.map {
-                if (it.id == id) it.copy(nombre = nombre, categoria = categoria) else it
+        val equipoExistente = _equipos.value.find { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
+
+        if (nombre.isBlank()) {
+            return Result.failure(IllegalArgumentException("El nombre del equipo no puede estar vacío"))
+        }
+
+        _equipos.value = _equipos.value.map { equipo ->
+            if (equipo.id == id) {
+                equipo.copy(
+                    nombre = nombre.trim(),
+                    categoria = categoria,
+                    descripcion = descripcion.trim()
+                )
+            } else {
+                equipo
             }
         }
+
         return Result.success(Unit)
     }
 
     override fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> {
-        _equipos.update { lista ->
-            lista.map {
-                if (it.id == id) it.copy(estado = nuevoEstado) else it
+        val equipoExistente = _equipos.value.find { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
+
+        if (equipoExistente.estado == EstadoEquipo.PRESTADO && (nuevoEstado == EstadoEquipo.EN_MANTENIMIENTO || nuevoEstado == EstadoEquipo.DADO_DE_BAJA)) {
+            return Result.failure(IllegalStateException("No se puede cambiar el estado de un equipo que se encuentra PRESTADO"))
+        }
+
+        _equipos.value = _equipos.value.map { equipo ->
+            if (equipo.id == id) {
+                equipo.copy(estado = nuevoEstado)
+            } else {
+                equipo
             }
         }
+
         return Result.success(Unit)
     }
 }

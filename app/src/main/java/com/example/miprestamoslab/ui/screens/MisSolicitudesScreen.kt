@@ -3,8 +3,11 @@ package com.example.miprestamoslab.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.miprestamoslab.model.EstadoSolicitud
@@ -12,87 +15,68 @@ import com.example.miprestamoslab.model.SolicitudPrestamo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SolicitudesScreen(
+fun MisSolicitudesScreen(
     solicitudes: List<SolicitudPrestamo>,
-    onAprobar: (Int) -> Unit,
-    onEntregar: (Int) -> Unit,
-    onDevolver: (Int) -> Unit,
-    onVolver: () -> Unit
+    onSolicitudClick: (Int) -> Unit,
+    onBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Gestión de Solicitudes") },
+                title = { Text("Mis Solicitudes") },
                 navigationIcon = {
-                    TextButton(onClick = onVolver) { Text("Volver") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
                 }
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            items(solicitudes, key = { it.id }) { solicitud ->
-                SolicitudCardItem(
-                    solicitud = solicitud,
-                    onAprobar = { onAprobar(solicitud.id) },
-                    onEntregar = { onEntregar(solicitud.id) },
-                    onDevolver = { onDevolver(solicitud.id) }
-                )
+        if (solicitudes.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No has realizado solicitudes aún")
+            }
+        } else {
+            LazyColumn(modifier = Modifier.padding(padding)) {
+                items(solicitudes.sortedByDescending { it.id }, key = { it.id }) { solicitud ->
+                    SolicitudCard(solicitud = solicitud, onClick = { onSolicitudClick(solicitud.id) })
+                }
             }
         }
     }
 }
 
 @Composable
-fun SolicitudCardItem(
-    solicitud: SolicitudPrestamo,
-    onAprobar: () -> Unit,
-    onEntregar: () -> Unit,
-    onDevolver: () -> Unit
-) {
+fun SolicitudCard(solicitud: SolicitudPrestamo, onClick: () -> Unit) {
+    val estadoColor = when (solicitud.estado) {
+        EstadoSolicitud.SOLICITADA -> MaterialTheme.colorScheme.primary
+        EstadoSolicitud.APROBADA -> MaterialTheme.colorScheme.secondary
+        EstadoSolicitud.CANCELADA, EstadoSolicitud.RECHAZADA -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.outline
+    }
+
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "Solicitud #${solicitud.id}", style = MaterialTheme.typography.titleMedium)
-            Text(text = "Ambiente: ${solicitud.ambienteDestino}")
-            Text(text = "Propósito: ${solicitud.proposito}")
-            Text(text = "Estado: ${solicitud.estado.name}", style = MaterialTheme.typography.bodyMedium)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                // HU_07: Aprobar
-                if (solicitud.estado == EstadoSolicitud.SOLICITADA) {
-                    Button(onClick = onAprobar) {
-                        Text("Aprobar")
-                    }
-                }
-
-                // HU_08: Registrar Entrega Física
-                if (solicitud.estado == EstadoSolicitud.APROBADA) {
-                    Button(onClick = onEntregar) {
-                        Text("Registrar Entrega (HU_08)")
-                    }
-                }
-
-                // HU_09: Registrar Devolución
-                if (solicitud.estado == EstadoSolicitud.ENTREGADA) {
-                    Button(
-                        onClick = onDevolver,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Text("Registrar Devolución (HU_09)")
-                    }
-                }
+            Text(text = "Equipo ID: ${solicitud.equipoId}")
+            Text(text = "Duración: ${solicitud.duracionHoras} horas")
+            Text(
+                text = "Estado: ${solicitud.estado.name}",
+                color = estadoColor
+            )
+            if (solicitud.estado == EstadoSolicitud.SOLICITADA) {
+                Text(
+                    text = "Toca para ver detalles o cancelar",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }
