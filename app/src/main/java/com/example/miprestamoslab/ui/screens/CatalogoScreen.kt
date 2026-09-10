@@ -132,6 +132,8 @@ fun EquipoCard(equipo: Equipo, onClick: () -> Unit) {
         EstadoEquipo.DISPONIBLE -> "Disponible"
         EstadoEquipo.RESERVADO -> "Reservado"
         EstadoEquipo.PRESTADO -> "Prestado"
+        EstadoEquipo.EN_MANTENIMIENTO -> "En Mantenimiento"
+        EstadoEquipo.DADO_DE_BAJA -> "Dado de Baja"
     }
 
     Card(
