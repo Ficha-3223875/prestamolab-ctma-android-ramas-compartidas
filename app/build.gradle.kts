@@ -4,13 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.prestamolabctma_2"
-    compileSdk {
-        version = release(37)
-    }
+    namespace = "com.example.miprestamoslab"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.prestamolabctma_2"
+        applicationId = "com.example.miprestamoslab"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -38,7 +36,10 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
+    implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)

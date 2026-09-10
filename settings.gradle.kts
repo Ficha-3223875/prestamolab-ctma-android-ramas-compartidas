@@ -22,6 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PrestamoLabCTMA-2"
+rootProject.name = "prestamolab"
 include(":app")
- 
