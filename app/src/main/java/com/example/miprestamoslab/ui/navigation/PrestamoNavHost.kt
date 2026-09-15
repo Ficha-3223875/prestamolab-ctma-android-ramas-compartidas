@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.miprestamoslab.ui.ListadoUiState
 import com.example.miprestamoslab.ui.PrestamoViewModel
 import com.example.miprestamoslab.ui.screens.*
 
@@ -51,8 +52,12 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
         }
 
         composable(Screen.Catalogo.route) {
+            val equipos = when (val state = uiState.listadoEquipos) {
+                is ListadoUiState.Contenido -> state.equipos
+                else -> emptyList()
+            }
             CatalogoScreen(
-                equipos = uiState.equipos,
+                equipos = equipos,
                 usuario = uiState.usuarioAutenticado,
                 onEquipoClick = { equipoId ->
                     navController.navigate(Screen.EquipoDetalle.createRoute(equipoId))

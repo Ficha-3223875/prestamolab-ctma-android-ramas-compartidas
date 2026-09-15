@@ -1,0 +1,4 @@
+- [ ] Refactor `PrestamoUiState.kt` with new state sealed interfaces
+- [ ] Update `PrestamoViewModel.kt` to manage `ListadoUiState` and `OperacionUiState`
+- [ ] Rewrite `PrestamoViewModelTest.kt` using `runTest` and functional test cases
+- [ ] Verify build and run unit tests

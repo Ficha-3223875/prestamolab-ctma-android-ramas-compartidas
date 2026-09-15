@@ -23,45 +23,70 @@ class PrestamoViewModel(
     val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
 
     init {
+        // Observar equipos (ListadoUiState)
         viewModelScope.launch {
-            repository.equipos.combine(repository.solicitudes) { eq, sol ->
-                PrestamoUiState(equipos = eq, solicitudes = sol)
-            }.collect { combined ->
-                _uiState.update { it.copy(equipos = combined.equipos, solicitudes = combined.solicitudes) }
+            repository.equipos
+                .onStart { _uiState.update { it.copy(listadoEquipos = ListadoUiState.Cargando) } }
+                .catch { e -> _uiState.update { it.copy(listadoEquipos = ListadoUiState.Error(e.message ?: "Error desconocido")) } }
+                .collect { lista ->
+                    _uiState.update {
+                        it.copy(
+                            listadoEquipos = if (lista.isEmpty()) ListadoUiState.Vacio else ListadoUiState.Contenido(lista)
+                        )
+                    }
+                }
+        }
+
+        // Observar solicitudes
+        viewModelScope.launch {
+            repository.solicitudes.collect { lista ->
+                _uiState.update { it.copy(solicitudes = lista) }
             }
         }
     }
 
-    // Autenticación (HU_15)
+    // Autenticación (HU_15) con OperacionUiState
     fun login(correo: String, contrasena: String, onSuccess: () -> Unit) {
         if (correo.isBlank() || contrasena.isBlank()) {
             _uiState.update { it.copy(mensajeError = "Por favor ingrese correo y contraseña") }
             return
         }
 
-        _uiState.update { it.copy(guardando = true, mensajeError = null) }
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso, guardando = true, mensajeError = null) }
 
-        if (contrasena == "123456") {
-            val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
-            val usuario = Usuario(
-                id = (1..100).random(),
-                correo = correo,
-                nombre = "Usuario SENA",
-                rol = rolSimulado
-            )
-            _uiState.update {
-                it.copy(usuarioAutenticado = usuario, guardando = false, mensajeError = null)
-            }
-            onSuccess()
-        } else {
-            _uiState.update {
-                it.copy(guardando = false, mensajeError = "Usuario o contraseña inválidos")
+        viewModelScope.launch {
+            // Simulamos un retraso para ver el estado "EnCurso"
+            if (contrasena == "123456") {
+                val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
+                val usuario = Usuario(
+                    id = (1..100).random(),
+                    correo = correo,
+                    nombre = "Usuario SENA",
+                    rol = rolSimulado
+                )
+                _uiState.update {
+                    it.copy(
+                        usuarioAutenticado = usuario,
+                        operacionState = OperacionUiState.Exitosa,
+                        guardando = false,
+                        mensajeError = null
+                    )
+                }
+                onSuccess()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        operacionState = OperacionUiState.Fallida("Usuario o contraseña inválidos"),
+                        guardando = false,
+                        mensajeError = "Usuario o contraseña inválidos"
+                    )
+                }
             }
         }
     }
 
     fun logout() {
-        _uiState.update { it.copy(usuarioAutenticado = null) }
+        _uiState.update { it.copy(usuarioAutenticado = null, operacionState = OperacionUiState.Inactiva) }
     }
 
     fun cargarEquipo(equipoId: Int) {
@@ -75,7 +100,7 @@ class PrestamoViewModel(
     }
 
     fun limpiarMensaje() {
-        _uiState.update { it.copy(mensaje = null) }
+        _uiState.update { it.copy(mensaje = null, operacionState = OperacionUiState.Inactiva) }
     }
 
     fun limpiarSeleccion() {
@@ -96,93 +121,139 @@ class PrestamoViewModel(
         if (duracionInt == null || !duracionValida(duracionInt)) errores.add("La duración debe estar entre 1 y 8 horas.")
 
         if (errores.isNotEmpty()) {
-            _uiState.update { it.copy(mensaje = errores.joinToString("\n")) }
+            val msg = errores.joinToString("\n")
+            _uiState.update { it.copy(mensaje = msg, operacionState = OperacionUiState.Fallida(msg)) }
             return
         }
 
-        if (_uiState.value.guardando) return
+        if (_uiState.value.operacionState == OperacionUiState.EnCurso) return
 
-        _uiState.update { it.copy(guardando = true) }
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso, guardando = true) }
 
-        val solicitud = SolicitudPrestamo(
-            id = 0,
-            equipoId = equipoId,
-            ambienteDestino = ambiente.trim(),
-            proposito = proposito.trim(),
-            duracionHoras = duracionInt!!,
-            estado = EstadoSolicitud.SOLICITADA
-        )
+        viewModelScope.launch {
+            val solicitud = SolicitudPrestamo(
+                id = 0,
+                equipoId = equipoId,
+                ambienteDestino = ambiente.trim(),
+                proposito = proposito.trim(),
+                duracionHoras = duracionInt!!,
+                estado = EstadoSolicitud.SOLICITADA
+            )
 
-        val resultado = repository.crearSolicitud(solicitud)
+            val resultado = repository.crearSolicitud(solicitud)
 
-        _uiState.update { it.copy(guardando = false) }
-
-        resultado
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = "Solicitud registrada correctamente") }
+            resultado.onSuccess {
+                _uiState.update { 
+                    it.copy(
+                        mensaje = "Solicitud registrada correctamente",
+                        operacionState = OperacionUiState.Exitosa,
+                        guardando = false
+                    ) 
+                }
                 onSuccess()
+            }.onFailure { error ->
+                val errorMsg = error.message ?: "Error al crear solicitud"
+                _uiState.update { 
+                    it.copy(
+                        mensaje = errorMsg,
+                        operacionState = OperacionUiState.Fallida(errorMsg),
+                        guardando = false
+                    ) 
+                }
             }
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message ?: "Error al crear solicitud") }
-            }
+        }
     }
 
     fun cancelarSolicitud(solicitudId: Int, onSuccess: () -> Unit = {}) {
-        val resultado = repository.cancelarSolicitud(solicitudId)
-        resultado
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = "Solicitud cancelada correctamente") }
-                onSuccess()
-            }
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message ?: "Error al cancelar solicitud") }
-            }
+        viewModelScope.launch {
+            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+            repository.cancelarSolicitud(solicitudId)
+                .onSuccess {
+                    _uiState.update { 
+                        it.copy(
+                            mensaje = "Solicitud cancelada correctamente",
+                            operacionState = OperacionUiState.Exitosa
+                        ) 
+                    }
+                    onSuccess()
+                }
+                .onFailure { error ->
+                    val errorMsg = error.message ?: "Error al cancelar solicitud"
+                    _uiState.update { 
+                        it.copy(
+                            mensaje = errorMsg,
+                            operacionState = OperacionUiState.Fallida(errorMsg)
+                        ) 
+                    }
+                }
+        }
     }
 
     fun aprobarSolicitud(solicitudId: Int) {
-        repository.aprobarSolicitud(solicitudId)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al aprobar solicitud") } }
+        viewModelScope.launch {
+            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+            repository.aprobarSolicitud(solicitudId)
+                .onSuccess { 
+                    _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente", operacionState = OperacionUiState.Exitosa) } 
+                }
+                .onFailure { error -> 
+                    _uiState.update { it.copy(mensaje = error.message ?: "Error al aprobar solicitud", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) } 
+                }
+        }
     }
 
     fun rechazarSolicitud(solicitudId: Int, razon: String) {
-        repository.rechazarSolicitud(solicitudId, razon)
-            .onSuccess { _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente") } }
-            .onFailure { error -> _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud") } }
+        viewModelScope.launch {
+            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+            repository.rechazarSolicitud(solicitudId, razon)
+                .onSuccess { 
+                    _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente", operacionState = OperacionUiState.Exitosa) } 
+                }
+                .onFailure { error -> 
+                    _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) } 
+                }
+        }
     }
 
-    // --- SPRINT 4: GESTIÓN DE INVENTARIO (HU 10, HU 11, HU 12) ---
-
     fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
-        repository.agregarEquipo(nombre, categoria, descripcion)
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = "Equipo agregado correctamente") }
-                onSuccess()
-            }
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar equipo") }
-            }
+        viewModelScope.launch {
+            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+            repository.agregarEquipo(nombre, categoria, descripcion)
+                .onSuccess {
+                    _uiState.update { it.copy(mensaje = "Equipo agregado correctamente", operacionState = OperacionUiState.Exitosa) }
+                    onSuccess()
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar equipo", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                }
+        }
     }
 
     fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
-        repository.editarEquipo(id, nombre, categoria, descripcion)
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente") }
-                onSuccess()
-            }
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar equipo") }
-            }
+        viewModelScope.launch {
+            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+            repository.editarEquipo(id, nombre, categoria, descripcion)
+                .onSuccess {
+                    _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente", operacionState = OperacionUiState.Exitosa) }
+                    onSuccess()
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar equipo", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                }
+        }
     }
 
     fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo, onSuccess: () -> Unit = {}) {
-        repository.cambiarEstadoEquipo(id, nuevoEstado)
-            .onSuccess {
-                _uiState.update { it.copy(mensaje = "Estado del equipo actualizado a $nuevoEstado") }
-                onSuccess()
-            }
-            .onFailure { error ->
-                _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado") }
-            }
+        viewModelScope.launch {
+            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+            repository.cambiarEstadoEquipo(id, nuevoEstado)
+                .onSuccess {
+                    _uiState.update { it.copy(mensaje = "Estado del equipo actualizado a $nuevoEstado", operacionState = OperacionUiState.Exitosa) }
+                    onSuccess()
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                }
+        }
     }
 }

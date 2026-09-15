@@ -12,6 +12,7 @@ import com.example.miprestamoslab.model.CategoriaEquipo
 import com.example.miprestamoslab.model.Equipo
 import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.ui.PrestamoViewModel
+import com.example.miprestamoslab.ui.ListadoUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,18 +62,43 @@ fun GestionInventarioScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(uiState.equipos) { equipo ->
-                    ItemEquipoAdmin(
-                        equipo = equipo,
-                        onEditar = { equipoAEditar = equipo },
-                        onCambiarEstado = { nuevoEstado ->
-                            viewModel.cambiarEstadoEquipo(equipo.id, nuevoEstado)
-                        }
+            when (val estado = uiState.listadoEquipos) {
+
+                ListadoUiState.Cargando -> {
+                    CircularProgressIndicator()
+                }
+
+                ListadoUiState.Vacio -> {
+                    Text("No hay equipos registrados")
+                }
+
+                is ListadoUiState.Error -> {
+                    Text(
+                        text = estado.mensaje,
+                        color = MaterialTheme.colorScheme.error
                     )
+                }
+
+                is ListadoUiState.Contenido -> {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(estado.equipos) { equipo ->
+                            ItemEquipoAdmin(
+                                equipo = equipo,
+                                onEditar = {
+                                    equipoAEditar = equipo
+                                },
+                                onCambiarEstado = { nuevoEstado ->
+                                    viewModel.cambiarEstadoEquipo(
+                                        equipo.id,
+                                        nuevoEstado
+                                    )
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
