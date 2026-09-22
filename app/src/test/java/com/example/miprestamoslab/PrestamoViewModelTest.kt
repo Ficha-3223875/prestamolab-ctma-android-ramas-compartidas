@@ -1,5 +1,7 @@
 package com.example.miprestamoslab
 
+import android.app.Application
+import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
 import com.example.miprestamoslab.model.CategoriaEquipo
 import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.ui.ListadoUiState
@@ -39,9 +41,11 @@ class PrestamoViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private fun createViewModel() = PrestamoViewModel(Application(), InMemoryPrestamoRepository(), mainDispatcherRule.testDispatcher)
+
     @Test
     fun inicializacion_debeCargarEquiposExitosamente() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
 
         advanceUntilIdle()
 
@@ -63,7 +67,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun login_flujoCompleto_debeActualizarEstados() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
         var exito = false
 
         viewModel.login(
@@ -101,7 +105,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun login_credencialesInvalidas_debeMostrarErrorEnOperacion() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
 
         viewModel.login(
             "error@sena.edu.co",
@@ -130,7 +134,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun crearSolicitud_conDatosValidos_debeCambiarEstadoEquipo() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
 
         viewModel.crearSolicitud(
             1,
@@ -164,7 +168,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun gestionInventario_agregarYEditarEquipo_funcionaCorrectamente() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
 
         // Agregar equipo
         viewModel.agregarEquipo(
@@ -229,7 +233,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun validacionSolicitud_camposInvalidos_noEnviaOperacionAlRepositorio() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
 
         // Propósito muy corto: menos de 10 caracteres
         viewModel.crearSolicitud(
@@ -259,7 +263,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun logout_debeLimpiarEstadoDeUsuario() = runTest {
-        val viewModel = PrestamoViewModel()
+        val viewModel = createViewModel()
 
         viewModel.login(
             "test@sena.edu.co",

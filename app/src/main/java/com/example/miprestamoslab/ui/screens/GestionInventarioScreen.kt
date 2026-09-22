@@ -13,6 +13,7 @@ import com.example.miprestamoslab.model.Equipo
 import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.ui.PrestamoViewModel
 import com.example.miprestamoslab.ui.ListadoUiState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +21,7 @@ fun GestionInventarioScreen(
     viewModel: PrestamoViewModel,
     onVolver: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var mostrarDialogoCrear by remember { mutableStateOf(false) }
     var equipoAEditar by remember { mutableStateOf<Equipo?>(null) }

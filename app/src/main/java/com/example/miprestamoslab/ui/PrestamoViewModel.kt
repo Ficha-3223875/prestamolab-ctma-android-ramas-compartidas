@@ -1,31 +1,57 @@
 package com.example.miprestamoslab.ui
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
+import com.example.miprestamoslab.data.local.PrestamoDatabase
+import com.example.miprestamoslab.data.repository.PrestamoRepository
+import com.example.miprestamoslab.data.repository.RealPrestamoRepository
+import com.example.miprestamoslab.data.remote.PrestamoApiService
+import com.example.miprestamoslab.data.remote.EquipoDto
+import com.example.miprestamoslab.data.remote.SolicitudPrestamoDto
 import com.example.miprestamoslab.domain.ambienteValido
 import com.example.miprestamoslab.domain.duracionValida
 import com.example.miprestamoslab.domain.propositoValido
-import com.example.miprestamoslab.model.CategoriaEquipo
-import com.example.miprestamoslab.model.EstadoEquipo
-import com.example.miprestamoslab.model.EstadoSolicitud
-import com.example.miprestamoslab.model.Rol
-import com.example.miprestamoslab.model.SolicitudPrestamo
-import com.example.miprestamoslab.model.Usuario
+import com.example.miprestamoslab.model.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PrestamoViewModel(
-    private val repository: InMemoryPrestamoRepository = InMemoryPrestamoRepository()
-) : ViewModel() {
+    application: Application,
+    repository: PrestamoRepository? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
+
+    private val actualRepository: PrestamoRepository = repository ?: run {
+        val database = PrestamoDatabase.getDatabase(application, viewModelScope)
+        val mockApiService = object : PrestamoApiService {
+            override suspend fun obtenerEquipos(): List<EquipoDto> = emptyList()
+            override suspend fun obtenerSolicitudes(): List<SolicitudPrestamoDto> = emptyList()
+            override suspend fun crearSolicitud(solicitud: SolicitudPrestamoDto): SolicitudPrestamoDto = solicitud
+            override suspend fun actualizarSolicitud(id: Int, solicitud: SolicitudPrestamoDto): SolicitudPrestamoDto = solicitud
+        }
+        RealPrestamoRepository(
+            database.equipoDao(),
+            database.solicitudPrestamoDao(),
+            mockApiService
+        )
+    }
 
     private val _uiState = MutableStateFlow(PrestamoUiState())
     val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
 
+    private val _biometricVerificado = MutableStateFlow(false)
+    val biometricVerificado: StateFlow<Boolean> = _biometricVerificado.asStateFlow()
+
+    private var isProcessing = false
+
     init {
-        // Observar equipos (ListadoUiState)
+        // Observar equipos de forma reactiva
         viewModelScope.launch {
-            repository.equipos
+            actualRepository.obtenerEquiposFlow()
                 .onStart { _uiState.update { it.copy(listadoEquipos = ListadoUiState.Cargando) } }
                 .catch { e -> _uiState.update { it.copy(listadoEquipos = ListadoUiState.Error(e.message ?: "Error desconocido")) } }
                 .collect { lista ->
@@ -37,25 +63,29 @@ class PrestamoViewModel(
                 }
         }
 
-        // Observar solicitudes
+        // Observar solicitudes de forma reactiva
         viewModelScope.launch {
-            repository.solicitudes.collect { lista ->
+            actualRepository.obtenerSolicitudesFlow().collect { lista ->
                 _uiState.update { it.copy(solicitudes = lista) }
             }
         }
     }
 
-    // Autenticación (HU_15) con OperacionUiState
+    fun setBiometricVerificado(verificado: Boolean) {
+        _biometricVerificado.value = verificado
+    }
+
     fun login(correo: String, contrasena: String, onSuccess: () -> Unit) {
         if (correo.isBlank() || contrasena.isBlank()) {
             _uiState.update { it.copy(mensajeError = "Por favor ingrese correo y contraseña") }
             return
         }
 
+        if (isProcessing) return
+        isProcessing = true
         _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso, guardando = true, mensajeError = null) }
 
         viewModelScope.launch {
-            // Simulamos un retraso para ver el estado "EnCurso"
             if (contrasena == "123456") {
                 val rolSimulado = if (correo.contains("encargado")) Rol.ENCARGADO else Rol.APRENDIZ
                 val usuario = Usuario(
@@ -72,6 +102,7 @@ class PrestamoViewModel(
                         mensajeError = null
                     )
                 }
+                isProcessing = false
                 onSuccess()
             } else {
                 _uiState.update {
@@ -81,22 +112,28 @@ class PrestamoViewModel(
                         mensajeError = "Usuario o contraseña inválidos"
                     )
                 }
+                isProcessing = false
             }
         }
     }
 
     fun logout() {
         _uiState.update { it.copy(usuarioAutenticado = null, operacionState = OperacionUiState.Inactiva) }
+        _biometricVerificado.value = false
     }
 
     fun cargarEquipo(equipoId: Int) {
-        val equipo = repository.obtenerEquipo(equipoId)
-        _uiState.update { it.copy(equipoSeleccionado = equipo) }
+        viewModelScope.launch {
+            val equipo = withContext(ioDispatcher) { actualRepository.obtenerEquipo(equipoId) }
+            _uiState.update { it.copy(equipoSeleccionado = equipo) }
+        }
     }
 
     fun cargarSolicitud(solicitudId: Int) {
-        val solicitud = repository.obtenerSolicitud(solicitudId)
-        _uiState.update { it.copy(solicitudSeleccionada = solicitud) }
+        viewModelScope.launch {
+            val solicitud = withContext(ioDispatcher) { actualRepository.obtenerSolicitud(solicitudId) }
+            _uiState.update { it.copy(solicitudSeleccionada = solicitud) }
+        }
     }
 
     fun limpiarMensaje() {
@@ -126,8 +163,8 @@ class PrestamoViewModel(
             return
         }
 
-        if (_uiState.value.operacionState == OperacionUiState.EnCurso) return
-
+        if (isProcessing) return
+        isProcessing = true
         _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso, guardando = true) }
 
         viewModelScope.launch {
@@ -140,120 +177,146 @@ class PrestamoViewModel(
                 estado = EstadoSolicitud.SOLICITADA
             )
 
-            val resultado = repository.crearSolicitud(solicitud)
+            val resultado = withContext(ioDispatcher) { actualRepository.crearSolicitud(solicitud) }
 
             resultado.onSuccess {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         mensaje = "Solicitud registrada correctamente",
                         operacionState = OperacionUiState.Exitosa,
                         guardando = false
-                    ) 
+                    )
                 }
+                isProcessing = false
                 onSuccess()
             }.onFailure { error ->
                 val errorMsg = error.message ?: "Error al crear solicitud"
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
                         mensaje = errorMsg,
                         operacionState = OperacionUiState.Fallida(errorMsg),
                         guardando = false
-                    ) 
+                    )
                 }
+                isProcessing = false
             }
         }
     }
 
     fun cancelarSolicitud(solicitudId: Int, onSuccess: () -> Unit = {}) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
-            repository.cancelarSolicitud(solicitudId)
-                .onSuccess {
-                    _uiState.update { 
-                        it.copy(
-                            mensaje = "Solicitud cancelada correctamente",
-                            operacionState = OperacionUiState.Exitosa
-                        ) 
-                    }
-                    onSuccess()
+            val res = withContext(ioDispatcher) { actualRepository.cancelarSolicitud(solicitudId) }
+            res.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        mensaje = "Solicitud cancelada correctamente",
+                        operacionState = OperacionUiState.Exitosa
+                    )
                 }
-                .onFailure { error ->
-                    val errorMsg = error.message ?: "Error al cancelar solicitud"
-                    _uiState.update { 
-                        it.copy(
-                            mensaje = errorMsg,
-                            operacionState = OperacionUiState.Fallida(errorMsg)
-                        ) 
-                    }
+                isProcessing = false
+                onSuccess()
+            }.onFailure { error ->
+                val errorMsg = error.message ?: "Error al cancelar solicitud"
+                _uiState.update {
+                    it.copy(
+                        mensaje = errorMsg,
+                        operacionState = OperacionUiState.Fallida(errorMsg)
+                    )
                 }
+                isProcessing = false
+            }
         }
     }
 
     fun aprobarSolicitud(solicitudId: Int) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
-            repository.aprobarSolicitud(solicitudId)
-                .onSuccess { 
-                    _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente", operacionState = OperacionUiState.Exitosa) } 
-                }
-                .onFailure { error -> 
-                    _uiState.update { it.copy(mensaje = error.message ?: "Error al aprobar solicitud", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) } 
-                }
+            val res = withContext(ioDispatcher) { actualRepository.aprobarSolicitud(solicitudId) }
+            res.onSuccess {
+                _uiState.update { it.copy(mensaje = "Solicitud aprobada correctamente", operacionState = OperacionUiState.Exitosa) }
+                isProcessing = false
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al aprobar solicitud", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                isProcessing = false
+            }
         }
     }
 
     fun rechazarSolicitud(solicitudId: Int, razon: String) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
-            repository.rechazarSolicitud(solicitudId, razon)
-                .onSuccess { 
-                    _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente", operacionState = OperacionUiState.Exitosa) } 
-                }
-                .onFailure { error -> 
-                    _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) } 
-                }
+            val res = withContext(ioDispatcher) { actualRepository.rechazarSolicitud(solicitudId, razon) }
+            res.onSuccess {
+                _uiState.update { it.copy(mensaje = "Solicitud rechazada correctamente", operacionState = OperacionUiState.Exitosa) }
+                isProcessing = false
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al rechazar solicitud", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                isProcessing = false
+            }
         }
     }
 
     fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
-            repository.agregarEquipo(nombre, categoria, descripcion)
-                .onSuccess {
-                    _uiState.update { it.copy(mensaje = "Equipo agregado correctamente", operacionState = OperacionUiState.Exitosa) }
-                    onSuccess()
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar equipo", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
-                }
+            val res = withContext(ioDispatcher) { actualRepository.agregarEquipo(nombre, categoria, descripcion) }
+            res.onSuccess {
+                _uiState.update { it.copy(mensaje = "Equipo agregado correctamente", operacionState = OperacionUiState.Exitosa) }
+                isProcessing = false
+                onSuccess()
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al agregar equipo", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                isProcessing = false
+            }
         }
     }
 
     fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String, onSuccess: () -> Unit = {}) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
-            repository.editarEquipo(id, nombre, categoria, descripcion)
-                .onSuccess {
-                    _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente", operacionState = OperacionUiState.Exitosa) }
-                    onSuccess()
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar equipo", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
-                }
+            val res = withContext(ioDispatcher) { actualRepository.editarEquipo(id, nombre, categoria, descripcion) }
+            res.onSuccess {
+                _uiState.update { it.copy(mensaje = "Equipo actualizado correctamente", operacionState = OperacionUiState.Exitosa) }
+                isProcessing = false
+                onSuccess()
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al actualizar equipo", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                isProcessing = false
+            }
         }
     }
 
     fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo, onSuccess: () -> Unit = {}) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
-            repository.cambiarEstadoEquipo(id, nuevoEstado)
-                .onSuccess {
-                    _uiState.update { it.copy(mensaje = "Estado del equipo actualizado a $nuevoEstado", operacionState = OperacionUiState.Exitosa) }
-                    onSuccess()
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
-                }
+            val res = withContext(ioDispatcher) { actualRepository.cambiarEstadoEquipo(id, nuevoEstado) }
+            res.onSuccess {
+                _uiState.update { it.copy(mensaje = "Estado del equipo actualizado a $nuevoEstado", operacionState = OperacionUiState.Exitosa) }
+                isProcessing = false
+                onSuccess()
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                isProcessing = false
+            }
         }
     }
 }

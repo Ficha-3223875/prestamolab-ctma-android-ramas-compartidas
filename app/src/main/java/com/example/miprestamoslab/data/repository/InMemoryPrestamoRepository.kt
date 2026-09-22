@@ -26,6 +26,8 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     private var nextSolicitudId = 1
 
+    override fun obtenerEquiposFlow(): kotlinx.coroutines.flow.Flow<List<Equipo>> = _equipos.asStateFlow()
+    override fun obtenerSolicitudesFlow(): kotlinx.coroutines.flow.Flow<List<SolicitudPrestamo>> = _solicitudes.asStateFlow()
     override fun obtenerEquipos(): List<Equipo> = _equipos.value
 
     override fun obtenerEquipo(id: Int): Equipo? = _equipos.value.find { it.id == id }

@@ -95,6 +95,14 @@ fun SolicitudDetalleScreen(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { /* Acción para capturar foto de devolución con FileProvider */ },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Capturar Foto de Devolución")
+                    }
                 }
             }
 
