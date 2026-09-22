@@ -1,8 +1,14 @@
 package com.example.miprestamoslab
 
+import com.example.miprestamoslab.data.local.SesionStore
+import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
+import com.example.miprestamoslab.model.Usuario
 import com.example.miprestamoslab.ui.PrestamoViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -16,6 +22,20 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+
+private class FakeSesionStore : SesionStore {
+    private val _usuario = MutableStateFlow<Usuario?>(null)
+    override val sesion: Flow<Usuario?> = _usuario.asStateFlow()
+    override suspend fun guardarSesion(usuario: Usuario) {
+        _usuario.value = usuario
+    }
+
+    override suspend fun limpiarSesion() {
+        _usuario.value = null
+    }
+
+    fun sesionEnPersistencia(): Usuario? = _usuario.value
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(
@@ -38,7 +58,7 @@ class PrestamoViewModelTest {
     @Test
     fun dadoCredencialesValidas_cuandoLogin_entoncesAutenticaCorrectamente() {
         // Arrange
-        val viewModel = PrestamoViewModel()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), FakeSesionStore())
         val correoPrueba = "usuario.sena@sena.edu.co"
         var fueExitoso = false
 
@@ -60,7 +80,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun dadoCorreoDeEncargado_cuandoAutentica_entoncesAsignaRolEncargado() {
-        val viewModel = PrestamoViewModel()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), FakeSesionStore())
         // Mantiene la palabra 'encargado' para pasar la condición interna del ViewModel,
         // pero con una estructura de correo distinta.
         val correoEncargado = "encargado.laboratorio@sena.edu.co"
@@ -74,7 +94,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun dadoContrasenaErronea_cuandoLogin_entoncesNotificaErrorYNoAutentica() {
-        val viewModel = PrestamoViewModel()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), FakeSesionStore())
         var seEjecutoExito = false
 
         viewModel.login(
@@ -92,7 +112,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun dadoCredencialesEnBlanco_cuandoIntentaIngresar_entoncesMuestraMensajeDeCamposRequeridos() {
-        val viewModel = PrestamoViewModel()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), FakeSesionStore())
 
         // Probando con cadenas en blanco
         viewModel.login(correo = "   ", contrasena = "") {}
@@ -104,7 +124,7 @@ class PrestamoViewModelTest {
 
     @Test
     fun dadoUsuarioAutenticado_cuandoHaceLogout_entoncesLimpiaLaSesion() {
-        val viewModel = PrestamoViewModel()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), FakeSesionStore())
 
         // 1. Iniciar sesión previa
         viewModel.login("aprendiz@sena.edu.co", "123456") {}
@@ -115,5 +135,30 @@ class PrestamoViewModelTest {
 
         // 3. Verificar estado nulo
         assertNull(viewModel.uiState.value.usuarioAutenticado)
+    }
+
+    @Test
+    fun dadoLoginExitoso_cuandoPersiste_entoncesSesionStoreGuardaAlUsuario() {
+        val sesionStore = FakeSesionStore()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), sesionStore)
+
+        viewModel.login("aprendiz@sena.edu.co", "123456") {}
+
+        val usuarioPersistido = sesionStore.sesionEnPersistencia()
+        assertNotNull("La sesión debía persistirse en el store", usuarioPersistido)
+        assertEquals("aprendiz@sena.edu.co", usuarioPersistido?.correo)
+    }
+
+    @Test
+    fun dadoUsuarioLogueado_cuandoLogout_entoncesSesionStoreSeLimpia() {
+        val sesionStore = FakeSesionStore()
+        val viewModel = PrestamoViewModel(InMemoryPrestamoRepository(), sesionStore)
+
+        viewModel.login("aprendiz@sena.edu.co", "123456") {}
+        assertNotNull(sesionStore.sesionEnPersistencia())
+
+        viewModel.logout()
+
+        assertNull(sesionStore.sesionEnPersistencia())
     }
 }

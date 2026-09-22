@@ -30,7 +30,7 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
+fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoViewModel.Factory)) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsState()
 

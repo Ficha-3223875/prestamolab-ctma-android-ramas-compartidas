@@ -1,5 +1,6 @@
 package com.example.miprestamoslab.data.repository
 
+import com.example.miprestamoslab.data.local.EquiposIniciales
 import com.example.miprestamoslab.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -7,22 +8,11 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class InMemoryPrestamoRepository : PrestamoRepository {
 
-    private val _equipos = MutableStateFlow(
-        listOf(
-            Equipo(1, "Multímetro Digital", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
-            Equipo(2, "Kit Arduino Uno", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
-            Equipo(3, "Tablet Samsung", CategoriaEquipo.TABLETA, EstadoEquipo.DISPONIBLE),
-            Equipo(4, "Cámara DSLR Canon", CategoriaEquipo.CAMARA, EstadoEquipo.DISPONIBLE),
-            Equipo(5, "Soldador de Estaño", CategoriaEquipo.HERRAMIENTA, EstadoEquipo.DISPONIBLE),
-            Equipo(6, "Teclado Mecánico", CategoriaEquipo.PERIFERICO, EstadoEquipo.DISPONIBLE),
-            Equipo(7, "Osciloscopio USB", CategoriaEquipo.ELECTRONICA, EstadoEquipo.DISPONIBLE),
-            Equipo(8, "Set Destornilladores", CategoriaEquipo.HERRAMIENTA, EstadoEquipo.DISPONIBLE)
-        )
-    )
-    val equipos: StateFlow<List<Equipo>> = _equipos.asStateFlow()
+    private val _equipos = MutableStateFlow(EquiposIniciales.lista)
+    override val equipos: StateFlow<List<Equipo>> = _equipos.asStateFlow()
 
     private val _solicitudes = MutableStateFlow<List<SolicitudPrestamo>>(emptyList())
-    val solicitudes: StateFlow<List<SolicitudPrestamo>> = _solicitudes.asStateFlow()
+    override val solicitudes: StateFlow<List<SolicitudPrestamo>> = _solicitudes.asStateFlow()
 
     private var nextSolicitudId = 1
 
@@ -34,7 +24,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     override fun obtenerSolicitud(id: Int): SolicitudPrestamo? = _solicitudes.value.find { it.id == id }
 
-    override fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit> {
+    override suspend fun crearSolicitud(solicitud: SolicitudPrestamo): Result<Unit> {
         val equipo = _equipos.value.find { it.id == solicitud.equipoId }
             ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
 
@@ -60,7 +50,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    override fun cancelarSolicitud(id: Int): Result<Unit> {
+    override suspend fun cancelarSolicitud(id: Int): Result<Unit> {
         val solicitud = _solicitudes.value.find { it.id == id }
             ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
 
@@ -81,7 +71,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    override fun aprobarSolicitud(id: Int): Result<Unit> {
+    override suspend fun aprobarSolicitud(id: Int): Result<Unit> {
         val solicitud = _solicitudes.value.find { it.id == id }
             ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
 
@@ -96,7 +86,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    override fun rechazarSolicitud(id: Int, razon: String): Result<Unit> {
+    override suspend fun rechazarSolicitud(id: Int, razon: String): Result<Unit> {
         val solicitud = _solicitudes.value.find { it.id == id }
             ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
 
@@ -121,7 +111,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
     // --- SPRINT 4: GESTIÓN DE INVENTARIO ---
 
-    override fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
+    override suspend fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
         if (nombre.isBlank()) {
             return Result.failure(IllegalArgumentException("El nombre del equipo no puede estar vacío"))
         }
@@ -139,7 +129,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    override fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
+    override suspend fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> {
         val equipoExistente = _equipos.value.find { it.id == id }
             ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
 
@@ -162,7 +152,7 @@ class InMemoryPrestamoRepository : PrestamoRepository {
         return Result.success(Unit)
     }
 
-    override fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> {
+    override suspend fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> {
         val equipoExistente = _equipos.value.find { it.id == id }
             ?: return Result.failure(IllegalArgumentException("Equipo no encontrado"))
 

@@ -1,5 +1,7 @@
 package com.example.miprestamoslab
 
+import kotlinx.coroutines.test.runTest
+
 import com.example.miprestamoslab.data.repository.InMemoryPrestamoRepository
 import com.example.miprestamoslab.model.CategoriaEquipo
 import com.example.miprestamoslab.model.EstadoEquipo
@@ -11,7 +13,7 @@ import org.junit.Test
 class InMemoryPrestamoRepositoryTest {
 
     @Test
-    fun obtenerEquipos_debeCargarLosEquiposIniciales() {
+    fun obtenerEquipos_debeCargarLosEquiposIniciales() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val equipos = repository.obtenerEquipos()
@@ -22,7 +24,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun crearSolicitud_debeRegistrarSolicitudYReservarEquipo() {
+    fun crearSolicitud_debeRegistrarSolicitudYReservarEquipo() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val solicitud = SolicitudPrestamo(
@@ -48,7 +50,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun crearSolicitud_noDebePermitirDosSolicitudesActivasParaElMismoEquipo() {
+    fun crearSolicitud_noDebePermitirDosSolicitudesActivasParaElMismoEquipo() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val solicitud1 = SolicitudPrestamo(
@@ -78,7 +80,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun cancelarSolicitud_debeCambiarEstadoYLiberarEquipo() {
+    fun cancelarSolicitud_debeCambiarEstadoYLiberarEquipo() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val solicitud = SolicitudPrestamo(
@@ -106,7 +108,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun aprobarSolicitud_debeCambiarEstadoAprobada() {
+    fun aprobarSolicitud_debeCambiarEstadoAprobada() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val solicitud = SolicitudPrestamo(
@@ -130,7 +132,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun rechazarSolicitud_debeGuardarRazonYLiberarEquipo() {
+    fun rechazarSolicitud_debeGuardarRazonYLiberarEquipo() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val solicitud = SolicitudPrestamo(
@@ -170,7 +172,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun rechazarSolicitud_noDebeAceptarRazonMuyCorta() {
+    fun rechazarSolicitud_noDebeAceptarRazonMuyCorta() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val solicitud = SolicitudPrestamo(
@@ -194,7 +196,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun agregarEquipo_debeCrearNuevoEquipoDisponible() {
+    fun agregarEquipo_debeCrearNuevoEquipoDisponible() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val resultado = repository.agregarEquipo(
@@ -218,7 +220,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun editarEquipo_debeActualizarDatosDelEquipo() {
+    fun editarEquipo_debeActualizarDatosDelEquipo() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val resultado = repository.editarEquipo(
@@ -241,7 +243,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun cambiarEstadoEquipo_debeActualizarEstado() {
+    fun cambiarEstadoEquipo_debeActualizarEstado() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         val resultado = repository.cambiarEstadoEquipo(
@@ -257,7 +259,7 @@ class InMemoryPrestamoRepositoryTest {
     }
 
     @Test
-    fun cambiarEstadoEquipo_noDebePermitirMantenimientoSiEstaPrestado() {
+    fun cambiarEstadoEquipo_noDebePermitirMantenimientoSiEstaPrestado() = runTest {
         val repository = InMemoryPrestamoRepository()
 
         repository.cambiarEstadoEquipo(8, EstadoEquipo.PRESTADO)
