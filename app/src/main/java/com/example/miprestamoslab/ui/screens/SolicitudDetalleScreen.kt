@@ -1,16 +1,22 @@
 package com.example.miprestamoslab.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.example.miprestamoslab.model.EstadoSolicitud
 import com.example.miprestamoslab.model.SolicitudPrestamo
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,6 +25,7 @@ fun SolicitudDetalleScreen(
     mensaje: String?,
     onLimpiarMensaje: () -> Unit,
     onCancelar: (Int) -> Unit,
+    onRegistrarDevolucion: (Int, String) -> Unit,
     onBack: () -> Unit
 ) {
     LaunchedEffect(mensaje) {
@@ -26,6 +33,65 @@ fun SolicitudDetalleScreen(
             kotlinx.coroutines.delay(3000)
             onLimpiarMensaje()
         }
+    }
+
+    val context = LocalContext.current
+    var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var showPhotoDialog by remember { mutableStateOf(false) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempPhotoUri != null && solicitud != null) {
+            onRegistrarDevolucion(solicitud.id, tempPhotoUri.toString())
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null && solicitud != null) {
+            onRegistrarDevolucion(solicitud.id, uri.toString())
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val photoFile = File(context.cacheDir, "devolucion_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "com.example.miprestamoslab.fileprovider", photoFile)
+            tempPhotoUri = uri
+            cameraLauncher.launch(uri)
+        }
+    }
+
+    if (showPhotoDialog) {
+        AlertDialog(
+            onDismissRequest = { showPhotoDialog = false },
+            title = { Text("Evidencia de Devolución") },
+            text = { Text("¿Cómo deseas adjuntar la fotografía de devolución?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPhotoDialog = false
+                        permissionLauncher.launch(android.Manifest.permission.CAMERA)
+                    }
+                ) {
+                    Text("Tomar Foto")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPhotoDialog = false
+                        galleryLauncher.launch("image/*")
+                    }
+                ) {
+                    Text("Elegir de Galería")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -65,6 +131,34 @@ fun SolicitudDetalleScreen(
                     DetalleItem("Duración", "${solicitud.duracionHoras} horas")
                     DetalleItem("Estado", solicitud.estado.name)
 
+                    if (solicitud.fotoDevolucionUri != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DetalleItem("Foto de evidencia", "Adjunta (" + solicitud.syncStatus + ")")
+                        Text(
+                            text = "URI: ${solicitud.fotoDevolucionUri}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val uri = Uri.parse(solicitud.fotoDevolucionUri)
+                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                    setDataAndType(uri, "image/*")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    // Handle if no app available to view image
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Abrir Evidencia Fotográfica")
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(24.dp))
 
                     if (solicitud.estado == EstadoSolicitud.SOLICITADA) {
@@ -96,12 +190,14 @@ fun SolicitudDetalleScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { /* Acción para capturar foto de devolución con FileProvider */ },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Capturar Foto de Devolución")
+                    if (solicitud.estado == EstadoSolicitud.APROBADA || solicitud.estado == EstadoSolicitud.ENTREGADA) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showPhotoDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Adjuntar/Capturar Foto de Devolución")
+                        }
                     }
                 }
             }

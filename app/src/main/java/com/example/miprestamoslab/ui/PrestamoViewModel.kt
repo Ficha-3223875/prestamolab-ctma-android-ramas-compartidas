@@ -13,6 +13,7 @@ import com.example.miprestamoslab.domain.ambienteValido
 import com.example.miprestamoslab.domain.duracionValida
 import com.example.miprestamoslab.domain.propositoValido
 import com.example.miprestamoslab.model.*
+import com.example.miprestamoslab.util.NotificationHelper
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -24,6 +25,8 @@ class PrestamoViewModel(
     repository: PrestamoRepository? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(application, null, Dispatchers.IO)
 
     private val actualRepository: PrestamoRepository = repository ?: run {
         val database = PrestamoDatabase.getDatabase(application, viewModelScope)
@@ -180,6 +183,17 @@ class PrestamoViewModel(
             val resultado = withContext(ioDispatcher) { actualRepository.crearSolicitud(solicitud) }
 
             resultado.onSuccess {
+                val createdSolicitud = withContext(ioDispatcher) {
+                    actualRepository.obtenerSolicitudes().lastOrNull { it.equipoId == equipoId }
+                }
+                if (createdSolicitud != null) {
+                    NotificationHelper.mostrarNotificacionNuevaSolicitud(
+                        getApplication(),
+                        createdSolicitud.id,
+                        createdSolicitud.equipoId,
+                        createdSolicitud.proposito
+                    )
+                }
                 _uiState.update {
                     it.copy(
                         mensaje = "Solicitud registrada correctamente",
@@ -315,6 +329,29 @@ class PrestamoViewModel(
                 onSuccess()
             }.onFailure { error ->
                 _uiState.update { it.copy(mensaje = error.message ?: "Error al cambiar estado", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
+                isProcessing = false
+            }
+        }
+    }
+
+    fun registrarDevolucion(solicitudId: Int, fotoUri: String, onSuccess: () -> Unit = {}) {
+        if (isProcessing) return
+        isProcessing = true
+        _uiState.update { it.copy(operacionState = OperacionUiState.EnCurso) }
+
+        viewModelScope.launch {
+            val res = withContext(ioDispatcher) { actualRepository.registrarDevolucion(solicitudId, fotoUri) }
+            res.onSuccess {
+                _uiState.update { it.copy(mensaje = "Devolución y foto registradas correctamente", operacionState = OperacionUiState.Exitosa) }
+                isProcessing = false
+                // Recargar la solicitud seleccionada si corresponde
+                if (_uiState.value.solicitudSeleccionada?.id == solicitudId) {
+                    val actualizada = withContext(ioDispatcher) { actualRepository.obtenerSolicitud(solicitudId) }
+                    _uiState.update { it.copy(solicitudSeleccionada = actualizada) }
+                }
+                onSuccess()
+            }.onFailure { error ->
+                _uiState.update { it.copy(mensaje = error.message ?: "Error al registrar devolución", operacionState = OperacionUiState.Fallida(error.message ?: "Error")) }
                 isProcessing = false
             }
         }

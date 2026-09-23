@@ -164,4 +164,24 @@ class RealPrestamoRepository(
         equipoDao.actualizarEquipo(equipoEntity.copy(estado = nuevoEstado.name, syncStatus = "PENDING_UPDATE"))
         return Result.success(Unit)
     }
+
+    override fun registrarDevolucion(solicitudId: Int, fotoUri: String): Result<Unit> {
+        val solicitudEntity = solicitudPrestamoDao.obtenerSolicitudPorId(solicitudId)
+            ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
+
+        solicitudPrestamoDao.actualizarSolicitud(
+            solicitudEntity.copy(
+                estado = "DEVUELTA",
+                fotoDevolucionUri = fotoUri,
+                syncStatus = "LOCAL"
+            )
+        )
+
+        val equipoEntity = equipoDao.obtenerEquipoPorId(solicitudEntity.equipoId)
+        if (equipoEntity != null) {
+            equipoDao.actualizarEquipo(equipoEntity.copy(estado = "DISPONIBLE", syncStatus = "PENDING_UPDATE"))
+        }
+
+        return Result.success(Unit)
+    }
 }

@@ -50,7 +50,9 @@ fun SolicitudPrestamoEntity.toDomain(): SolicitudPrestamo {
         proposito = proposito,
         duracionHoras = duracionHoras,
         estado = try { EstadoSolicitud.valueOf(estado) } catch (e: Exception) { EstadoSolicitud.SOLICITADA },
-        razonRechazo = razonRechazo
+        razonRechazo = razonRechazo,
+        fotoDevolucionUri = fotoDevolucionUri,
+        syncStatus = syncStatus
     )
 }
 
@@ -63,8 +65,8 @@ fun SolicitudPrestamo.toEntity(syncStatus: String = "SYNCED", fotoDevolucionUri:
         duracionHoras = duracionHoras,
         estado = estado.name,
         razonRechazo = razonRechazo,
-        fotoDevolucionUri = fotoDevolucionUri,
-        syncStatus = syncStatus,
+        fotoDevolucionUri = fotoDevolucionUri ?: this.fotoDevolucionUri,
+        syncStatus = if (syncStatus == "SYNCED" && this.syncStatus != "SYNCED") this.syncStatus else syncStatus,
         metadata = metadata
     )
 }

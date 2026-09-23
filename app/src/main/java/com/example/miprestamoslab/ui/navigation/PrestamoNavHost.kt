@@ -169,6 +169,9 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
                         navController.popBackStack()
                     }
                 },
+                onRegistrarDevolucion = { id, uri ->
+                    viewModel.registrarDevolucion(id, uri)
+                },
                 onBack = { navController.popBackStack() }
             )
 

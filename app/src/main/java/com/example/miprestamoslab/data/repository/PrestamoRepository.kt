@@ -21,4 +21,5 @@ interface PrestamoRepository {
     fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> // HU 10
     fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> // HU 11
     fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> // HU 12
+    fun registrarDevolucion(solicitudId: Int, fotoUri: String): Result<Unit>
 }

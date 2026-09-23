@@ -16,4 +16,6 @@
 | TC-12 | HU-08 / CA-08.1 | Caso de uso | Admin en solicitud pendiente | Presionar el botón "Aprobar" | Estado cambia a "Aprobada" y equipo a "En préstamo" |
 | TC-13 | HU-08 / CA-08.2 | Caso de uso | Admin en solicitud pendiente | Presionar el botón "Rechazar" | Estado cambia a "Rechazada" y equipo se mantiene disponible |
 | TC-14 | HU-09 / CA-09.1 | Caso de uso | Sesión iniciada como Admin | Navegar a "Gestión de Inventario" | Muestra la lista completa de equipos con opción de registro/edición |
-| TC-15 | HU-10 / CA-10.1 | Caso de uso | Usuario en cualquier pantalla | Presionar el botón de cerrar sesión en la barra superior | Finaliza la sesión y redirige al Login |
+| TC-15 | HU-10 / CA-10.1 | Caso de uso | Solicitud aprobada/entregada | Pulsar "Adjuntar/Capturar Foto", elegir "Tomar Foto" o "Galería" y luego "Abrir Evidencia" | Captura exitosa, guardado en Room, cambio a DEVUELTA y apertura correcta de la imagen |
+| TC-16 | HU-11 / CA-11.1 | Caso de uso | App abierta / permisos concedidos | Crear una nueva solicitud de préstamo | Emisión inmediata de notificación local push en la barra de estado con alta prioridad |
+| TC-17 | HU-01 / CA-01.3 | Caso de uso | Usuario en cualquier pantalla | Presionar el botón de cerrar sesión en la barra superior | Finaliza la sesión, limpia token/estado y redirige al Login |

@@ -182,4 +182,19 @@ class InMemoryPrestamoRepository : PrestamoRepository {
 
         return Result.success(Unit)
     }
+
+    override fun registrarDevolucion(solicitudId: Int, fotoUri: String): Result<Unit> {
+        val solicitud = _solicitudes.value.find { it.id == solicitudId }
+            ?: return Result.failure(IllegalArgumentException("Solicitud no encontrada"))
+
+        _solicitudes.value = _solicitudes.value.map {
+            if (it.id == solicitudId) it.copy(estado = EstadoSolicitud.DEVUELTA, fotoDevolucionUri = fotoUri, syncStatus = "LOCAL") else it
+        }
+
+        _equipos.value = _equipos.value.map {
+            if (it.id == solicitud.equipoId) it.copy(estado = EstadoEquipo.DISPONIBLE) else it
+        }
+
+        return Result.success(Unit)
+    }
 }
