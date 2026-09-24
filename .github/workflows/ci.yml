@@ -1,0 +1,55 @@
+name: CI
+
+# Quality gates obligatorios de la guía integradora (sección 7 y 12):
+# build + unit tests + lint antes de poder hacer merge a main.
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Build + Unit Tests + Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25 (daemon JVM criteria)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests (JUnit + kotlinx-coroutines-test + MockWebServer)
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build debug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Lint
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Subir reportes si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/**
+            app/build/outputs/**
+          if-no-files-found: ignore

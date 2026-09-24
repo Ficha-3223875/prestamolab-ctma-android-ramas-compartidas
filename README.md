@@ -10,6 +10,44 @@
 
 ---
 
+## 2. Arquitectura actual
+
+```
+Compose UI  ── eventos ──►  ViewModel  ──►  Repository (único acceso a datos)
+      ▲                        │                  ├── Local : Room + DataStore  (fuente canónica)
+      └──── UiState/StateFlow ◄─┘                  └── Remoto: Retrofit + OkHttp (DTO ↔ dominio)
+```
+
+* **UI (Compose):** representa estado y emite eventos. No conoce Room ni Retrofit.
+* **ViewModel + UiState/StateFlow:** coordina estado y acciones; expone estados `Cargando / Contenido / Vacío / Error`.
+* **Repository:** decide el origen de datos (local-first: Room responde, la red sincroniza).
+* **Persistencia:** Room (entidades + DAO) y DataStore (sesión/preferencias).
+* **Red:** Retrofit + OkHttp con DTO, timeouts y mapeo de errores HTTP (401/404/5xx).
+
+Detalle completo en [`docs/`](docs/).
+
+## 3. Calidad, pruebas y CI
+
+| Elemento | Ubicación |
+|---|---|
+| Matriz de riesgos | [`docs/RIESGOS.md`](docs/RIESGOS.md) |
+| Plan de pruebas y casos (TC-01…TC-15) | [`docs/PLAN_PRUEBAS.md`](docs/PLAN_PRUEBAS.md) |
+| Bitácora de ejecución (PASS/FAIL/BLOCKED) | [`docs/BITACORA_PRUEBAS.md`](docs/BITACORA_PRUEBAS.md) |
+| Trazabilidad HU → CA → Riesgo → TC → PR → Bug | [`docs/MATRIZ_TRAZABILIDAD.md`](docs/MATRIZ_TRAZABILIDAD.md) |
+| Definition of Done | [`docs/DEFINITION_OF_DONE.md`](docs/DEFINITION_OF_DONE.md) |
+| Control de versiones por incremento | [`docs/VERSIONES.md`](docs/VERSIONES.md) |
+| Quality gates (build + unit tests + lint) | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+
+Ejecutar localmente los mismos quality gates que CI:
+
+```bash
+./gradlew testDebugUnitTest   # pruebas unitarias
+./gradlew assembleDebug       # compilación
+./gradlew lintDebug           # análisis estático
+```
+
+---
+
 # Historias de Usuario
 
 ## HU-01 - Autenticación de Usuario
@@ -230,3 +268,60 @@
 ### Casos de prueba relacionados
 
 * TC-15
+
+---
+
+# Alineación con la Guía de Aprendizaje Integradora (Semanas 5–9)
+
+## Checklist de la guía (sección 12) — estado en esta rama
+
+| Requisito | Estado | Evidencia |
+|---|---|---|
+| Product Goal visible; Backlog basado en Issues reales | ⚠️ | Product Goal en §1; los HU viven en este README (migrar/verificar en GitHub Issues) |
+| HU con criterios de aceptación verificables | ✅ | §2 Historias de Usuario (CA-01.1 … CA-10.2) |
+| Cada HU con riesgos y casos de prueba relacionados | ✅ | `docs/RIESGOS.md`, `docs/PLAN_PRUEBAS.md` |
+| Ramas y PR rastreables por HU | ⚠️ | Ramas `feature/*` + PR existentes; falta naming `feature/hu-XX-...` en ramas nuevas |
+| La UI Compose no accede directamente a Room/Retrofit | ✅ | UI recibe `UiState` y eventos; datos en `data/local` y `data/remote` |
+| ViewModel / UiState / StateFlow coherentes | ✅ | `PrestamoUiState` con estados `Cargando/Contenido/Vacío/Error` (Semana 7) |
+| Room/DataStore con responsabilidad clara y fuente única de verdad | ✅ | `data/local/*`, `RoomPrestamoRepository` |
+| Corrutinas/Flow respetan ciclo de vida y manejo de errores | ✅ | `collectAsStateWithLifecycle`, `CancellationException` propagada, `RedError` tipado |
+| La integración REST maneja DTO, mapeo, timeouts y errores | ✅ | `data/remote/*` + `PrestamoApiServiceTest` (MockWebServer) |
+| Pruebas unitarias y/o de integración automatizadas | ✅ | 41 tests unitarios, 0 fallos |
+| GitHub Actions ejecuta build, tests y lint | ✅ | `.github/workflows/ci.yml` |
+| Defectos documentados con evidencia reproducible | ✅ | `docs/BITACORA_PRUEBAS.md` §3 |
+| Confirmación y regresión cuando aplica | ⬜ | Pendiente de ejecución manual y de abrir/cerrar Issues |
+| Permisos con mínimo privilegio (cámara/notificaciones) | ✅ | Photo Picker del sistema: sin permisos de cámara/almacenamiento |
+| Capacidad física adicional a la cámara, con justificación | ✅ | HU-14: sensor de luz ambiente (`data/capabilities/`), sin permisos y con privacidad documentada |
+| Sin secretos ni datos sensibles expuestos | ✅ | URL de ambiente vía `BuildConfig.BASE_URL` inyectada por Gradle |
+| Incremento demostrable desde `main` / tag de entrega | ⬜ | Falta etiquetar `v0.2.0`…`v0.6.0` (ver `docs/VERSIONES.md`) |
+| Cada integrante explica una HU y modifica una parte en vivo | ⬜ | Sustentación individual |
+
+Leyenda: ✅ cumplido · ⚠️ cumplido parcialmente · ⬜ pendiente.
+
+## Uso responsable de IA (sección 14)
+
+* Esta rama incluyó asistencia de IA para **generar y revisar código y documentación** (capa de red,
+  estados de carga, artefactos de gestión y pruebas).
+* **Verificación realizada por el equipo:** cada cambio se compiló (`assembleDebug`), se ejecutó la
+  suite completa (`testDebugUnitTest`: 41 tests, 0 fallos) y el análisis estático (`lintDebug`) antes de subirse.
+* **No se reportan PASS/FAIL inventados:** la bitácora solo registra ejecuciones reales
+  (`docs/BITACORA_PRUEBAS.md`).
+* **No hay secretos, tokens ni datos personales** generados ni versionados.
+* Cada integrante debe poder **explicar y modificar** el código de su HU antes de sustentarla:
+  leer `docs/MATRIZ_TRAZABILIDAD.md` para seguir la trazabilidad HU → CA → riesgo → TC → código → prueba.
+
+## Estructura del repositorio
+
+```
+.github/workflows/ci.yml      Quality gates: build + unit tests + lint
+docs/                         Riesgos, plan de pruebas, bitácora, trazabilidad, DoD, versiones
+app/src/main/java/.../model/        Modelos de dominio (Equipo, SolicitudPrestamo, …)
+app/src/main/java/.../domain/       Reglas y validaciones puras (fáciles de unit-testear)
+app/src/main/java/.../data/local/   Room (Entity/DAO/Database) + DataStore
+app/src/main/java/.../data/remote/  Retrofit/OkHttp, DTO, mapeo de errores y sincronización
+app/src/main/java/.../data/repository/  Repository como único acceso a datos
+app/src/main/java/.../ui/           ViewModel, UiState, navegación y pantallas Compose
+app/src/test/                       Pruebas unitarias (JUnit + coroutines-test + MockWebServer)
+app/src/androidTest/                Pruebas UI/instrumentadas (Compose Test)
+```
+

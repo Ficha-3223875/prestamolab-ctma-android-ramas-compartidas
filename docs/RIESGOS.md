@@ -12,3 +12,8 @@
 | R-08 | Visualización desactualizada del estado de las solicitudes del usuario | Media | Media | Medio | Actualización automática del UiState tras cambios |
 | R-09 | Aprobación o rechazo no autorizado por usuarios sin rol Administrador | Baja | Alta | Alto | Restricción de vista y acciones según el rol del usuario |
 | R-10 | Modificación o eliminación inconsistente de un equipo en el inventario | Media | Alta | Alto | Sincronización en el repositorio central del sistema |
+| R-11 | La URI de la evidencia fotográfica deja de ser legible tras reiniciar la app | Media | Media | Medio | `takePersistableUriPermission` + persistir URI y metadatos en Room (nunca el Bitmap) |
+| R-12 | Solicitar permisos que la funcionalidad no necesita (exceso de privilegio) | Media | Alta | Alto | Photo Picker del sistema: no requiere permisos de cámara ni de almacenamiento |
+| R-13 | El dispositivo no expone sensor de luz ambiente | Media | Bajo | Bajo | Estado "no disponible" en UI; la funcionalidad principal no depende del sensor |
+| R-14 | Endpoint remoto inaccesible o lento y UI quedada en "Cargando" | Alta | Alta | Alto | Timeouts en OkHttp, `RedError` tipado, estados Cargando/Error con reintento y estrategia local-first |
+| R-15 | Exponer URLs o credenciales de ambiente en el repositorio | Baja | Alta | Alto | URL por ambiente vía `BuildConfig.BASE_URL` inyectada por Gradle; ningún secreto versionado |

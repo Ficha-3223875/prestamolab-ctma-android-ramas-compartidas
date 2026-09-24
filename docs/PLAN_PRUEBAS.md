@@ -17,3 +17,8 @@
 | TC-13 | HU-08 / CA-08.2 | Caso de uso | Admin en solicitud pendiente | Presionar el botón "Rechazar" | Estado cambia a "Rechazada" y equipo se mantiene disponible |
 | TC-14 | HU-09 / CA-09.1 | Caso de uso | Sesión iniciada como Admin | Navegar a "Gestión de Inventario" | Muestra la lista completa de equipos con opción de registro/edición |
 | TC-15 | HU-10 / CA-10.1 | Caso de uso | Usuario en cualquier pantalla | Presionar el botón de cerrar sesión en la barra superior | Finaliza la sesión y redirige al Login |
+| TC-16 | HU-09 / CA-09.2 | Caso de uso | Sesión como encargado, catálogo visible | Presionar el ícono "Gestionar inventario" en la barra superior | Se abre la pantalla de gestión con el listado completo |
+| TC-17 | Estados de carga | Transición | Aplicación recién abierta / fuente de datos con fallo | Observar el catálogo | Se muestra Cargando → Contenido, Vacío o Error con botón "Reintentar" |
+| TC-18 | Sincronización API | Negativa | Dispositivo sin conectividad o servidor caído | Presionar el ícono "Sincronizar con el servidor" | Mensaje recuperable de error de red; la app sigue operativa con Room |
+| TC-19 | Evidencia fotográfica | Caso de uso | Solicitud abierta en detalle | Adjuntar imagen desde el selector del sistema | Se persiste la URI con metadatos y se lista en la solicitud |
+| TC-20 | Sensor de luz ambiente | Caso de uso | Detalle de equipo abierto | Observar la lectura de luz ambiental | Se muestra el valor en lux sin solicitar permisos |

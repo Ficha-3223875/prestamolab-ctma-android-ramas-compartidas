@@ -22,8 +22,10 @@ Relaciona cada Historia de Usuario (HU) con su implementación en código, sus c
 | Solo prestar equipos `DISPONIBLE` | `RoomPrestamoRepository.crearSolicitud` (`IllegalStateException` si no disponible) |
 | Prevenir duplicados por doble clic | `PrestamoViewModel`: guard `guardando` en todas las mutaciones; `enabled = !guardando` en UI |
 | IDs inexistentes sin crash | `RoomPrestamoRepository` devuelve `Result.failure`; pantallas muestran fallback con botón Volver |
-| Guardar imágenes como URI, no Bitmap/Base64 | Pendiente (Semana 9, evidencia fotográfica) |
-| No exponer secretos en código plano | Sin claves ni tokens en el repositorio; contraseña simulada aislada en `PrestamoViewModel.login` |
+| Guardar imágenes como URI, no Bitmap/Base64 | `EvidenciaEntity` persiste `uri` + metadatos (Semana 9); nunca se almacena el Bitmap en la base |
+| No exponer secretos en código plano | Sin claves ni tokens en el repositorio; la URL por ambiente se inyecta con `BuildConfig.BASE_URL` (Gradle), no en el código |
+| La UI no conoce Retrofit ni Room | `PrestamoNavHost` y las pantallas solo reciben `UiState` y emiten eventos; Retrofit vive en `data/remote` y Room en `data/local` |
+| Room es la fuente local canónica | La sincronización remota escribe en Room (`SincronizadorRemoto` → DAO) y la UI siempre lee de Room |
 
 ## Persistencia (Semana 6)
 
