@@ -39,6 +39,14 @@ interface PrestamoDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertarEquiposIniciales(equipos: List<EquipoEntity>)
 
+    /** Upsert de catálogo proveniente del servicio remoto (local-first, Room es la fuente canónica). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarEquiposRemotos(equipos: List<EquipoEntity>)
+
+    /** Upsert de solicitudes provenientes del servicio remoto. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarSolicitudesRemotas(solicitudes: List<SolicitudEntity>)
+
     @Query("UPDATE equipos SET estado = :estado WHERE id = :id")
     suspend fun actualizarEstadoEquipo(id: Int, estado: String)
 

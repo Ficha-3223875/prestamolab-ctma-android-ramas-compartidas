@@ -16,6 +16,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Ambientes dev/stage/prod: se inyectan desde Gradle, nunca se versionan secretos.
+        // Ej.: ./gradlew assembleDebug -PPRESTAMOLAB_AMBIENTE=stage -PPRESTAMOLAB_BASE_URL=https://api.stage.ejemplo.com/
+        val ambiente = (project.findProperty("PRESTAMOLAB_AMBIENTE") as String?) ?: "dev"
+        val baseUrl = (project.findProperty("PRESTAMOLAB_BASE_URL") as String?)
+            ?: "https://api.$ambiente.prestamolab.local/"
+        buildConfigField("String", "AMBIENTE", "\"$ambiente\"")
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
     }
 
     buildTypes {
@@ -31,6 +39,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     lint {
         disable += "PropertyEscape"
@@ -49,10 +58,16 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    // Semana 8: consumo de API REST
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.core)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))

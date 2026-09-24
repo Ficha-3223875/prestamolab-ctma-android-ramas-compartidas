@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.miprestamoslab.data.local.PrestamoDatabase
 import com.example.miprestamoslab.data.local.SesionDataStore
 import com.example.miprestamoslab.data.local.SesionStore
+import com.example.miprestamoslab.data.remote.RetrofitFactory
+import com.example.miprestamoslab.data.remote.SincronizadorRemoto
 import com.example.miprestamoslab.data.repository.PrestamoRepository
 import com.example.miprestamoslab.data.repository.RoomPrestamoRepository
 import com.example.miprestamoslab.domain.ambienteValido
@@ -19,6 +21,8 @@ import com.example.miprestamoslab.model.EstadoSolicitud
 import com.example.miprestamoslab.model.Rol
 import com.example.miprestamoslab.model.SolicitudPrestamo
 import com.example.miprestamoslab.model.Usuario
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,26 +32,65 @@ import kotlinx.coroutines.launch
 
 class PrestamoViewModel(
     private val repository: PrestamoRepository,
-    private val sesionStore: SesionStore
+    private val sesionStore: SesionStore,
+    private val sincronizador: SincronizadorRemoto? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrestamoUiState())
     val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            repository.equipos.combine(repository.solicitudes) { eq, sol ->
-                PrestamoUiState(equipos = eq, solicitudes = sol)
-            }.collect { combined ->
-                _uiState.update { it.copy(equipos = combined.equipos, solicitudes = combined.solicitudes) }
-            }
-        }
+    private var observacionJob: Job? = null
 
+    init {
+        iniciarObservacionDeDatos()
         viewModelScope.launch {
             sesionStore.sesion.collect { usuario ->
                 _uiState.update { it.copy(usuarioAutenticado = usuario) }
             }
         }
+    }
+
+    /**
+     * Observa los flujos del Repository y traduce el resultado a un [EstadoCarga] explícito.
+     * Si el Repository falla se entra en [EstadoCarga.ERROR] con mensaje recuperable (Semana 7).
+     */
+    private fun iniciarObservacionDeDatos() {
+        observacionJob?.cancel()
+        observacionJob = viewModelScope.launch {
+            try {
+                repository.equipos.combine(repository.solicitudes) { eq, sol -> eq to sol }
+                    .collect { (equipos, solicitudes) ->
+                        val estado = if (equipos.isEmpty() && solicitudes.isEmpty()) {
+                            EstadoCarga.VACIO
+                        } else {
+                            EstadoCarga.CONTENIDO
+                        }
+                        _uiState.update {
+                            it.copy(
+                                equipos = equipos,
+                                solicitudes = solicitudes,
+                                estadoCarga = estado,
+                                errorCarga = null
+                            )
+                        }
+                    }
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(
+                        estadoCarga = EstadoCarga.ERROR,
+                        errorCarga = error.message ?: "No fue posible cargar los datos"
+                    )
+                }
+            }
+        }
+    }
+
+    /** Estado recuperable: reintenta la suscripción tras un fallo de carga. */
+    fun reintentarCarga() {
+        _uiState.update { it.copy(estadoCarga = EstadoCarga.CARGANDO, errorCarga = null) }
+        iniciarObservacionDeDatos()
     }
 
     // Autenticación (HU_15)
@@ -87,6 +130,43 @@ class PrestamoViewModel(
         _uiState.update { it.copy(usuarioAutenticado = null) }
         viewModelScope.launch {
             sesionStore.limpiarSesion()
+        }
+    }
+
+    /**
+     * Sincroniza Room con el servicio remoto (HU-07 / Semana 8).
+     * Estrategia local-first: la UI sigue leyendo de Room mientras la red actualiza la base local.
+     */
+    fun sincronizar() {
+        val remoto = sincronizador
+        if (remoto == null) {
+            _uiState.update { it.copy(mensaje = "La sincronización remota no está habilitada en este entorno") }
+            return
+        }
+        if (_uiState.value.sincronizando) return
+
+        _uiState.update { it.copy(sincronizando = true, mensaje = null) }
+
+        viewModelScope.launch {
+            val equipos = remoto.sincronizarEquipos()
+            val solicitudes = if (equipos.isSuccess) {
+                remoto.sincronizarSolicitudes()
+            } else {
+                Result.success(-1)
+            }
+
+            _uiState.update { it.copy(sincronizando = false) }
+
+            solicitudes
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(mensaje = "Sincronización completada (${equipos.getOrNull() ?: 0} equipos remotos)")
+                    }
+                }
+                .onFailure { error ->
+                    // RedError ya traduce 401/404/5xx/timeouts a mensajes recuperables
+                    _uiState.update { it.copy(mensaje = error.message ?: "No fue posible sincronizar") }
+                }
         }
     }
 
@@ -272,7 +352,11 @@ class PrestamoViewModel(
                 val database = PrestamoDatabase.getInstance(app)
                 PrestamoViewModel(
                     repository = RoomPrestamoRepository(database),
-                    sesionStore = SesionDataStore(app)
+                    sesionStore = SesionDataStore(app),
+                    sincronizador = SincronizadorRemoto(
+                        api = RetrofitFactory.crear(),
+                        dao = database.prestamoDao()
+                    )
                 )
             }
         }

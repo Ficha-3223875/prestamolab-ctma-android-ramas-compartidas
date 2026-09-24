@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.miprestamoslab.model.EstadoSolicitud
 import com.example.miprestamoslab.model.SolicitudPrestamo
@@ -17,6 +19,7 @@ import com.example.miprestamoslab.model.SolicitudPrestamo
 @Composable
 fun MisSolicitudesScreen(
     solicitudes: List<SolicitudPrestamo>,
+    cargando: Boolean = false,
     onSolicitudClick: (Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -32,15 +35,25 @@ fun MisSolicitudesScreen(
             )
         }
     ) { padding ->
-        if (solicitudes.isEmpty()) {
-            Box(
+        when {
+            // Semana 7: mientras no llega el primer valor no se muestra el empty state
+            solicitudes.isEmpty() && cargando -> Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.semantics { contentDescription = "Indicador de carga" }
+                )
+            }
+
+            solicitudes.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
                 Text("No has realizado solicitudes aún")
             }
-        } else {
-            LazyColumn(modifier = Modifier.padding(padding)) {
+
+            else -> LazyColumn(modifier = Modifier.padding(padding)) {
                 items(solicitudes.sortedByDescending { it.id }, key = { it.id }) { solicitud ->
                     SolicitudCard(solicitud = solicitud, onClick = { onSolicitudClick(solicitud.id) })
                 }

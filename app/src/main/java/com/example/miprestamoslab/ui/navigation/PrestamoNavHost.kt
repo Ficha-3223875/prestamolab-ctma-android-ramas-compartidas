@@ -1,8 +1,8 @@
 package com.example.miprestamoslab.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,12 +27,14 @@ sealed class Screen(val route: String) {
 
     }
     object SolicitudesPendientes : Screen("solicitudesPendientes")
+    object GestionInventario : Screen("gestionInventario")
 }
 
 @Composable
 fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoViewModel.Factory)) {
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
+    // Semana 7: recolección consciente del ciclo de vida (no se sigue emitiendo en background)
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
 
@@ -54,6 +56,13 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
             CatalogoScreen(
                 equipos = uiState.equipos,
                 usuario = uiState.usuarioAutenticado,
+                estadoCarga = uiState.estadoCarga,
+                errorCarga = uiState.errorCarga,
+                onReintentarCarga = { viewModel.reintentarCarga() },
+                sincronizando = uiState.sincronizando,
+                onSincronizar = { viewModel.sincronizar() },
+                mensaje = uiState.mensaje,
+                onLimpiarMensaje = { viewModel.limpiarMensaje() },
                 onEquipoClick = { equipoId ->
                     navController.navigate(Screen.EquipoDetalle.createRoute(equipoId))
                 },
@@ -61,6 +70,7 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
                     navController.navigate(Screen.MisSolicitudes.route)
                 },
                 onVerSolicitudesPendientes = { navController.navigate(Screen.SolicitudesPendientes.route) },
+                onGestionInventario = { navController.navigate(Screen.GestionInventario.route) },
                 onLogout = {
                     viewModel.logout()
                     navController.navigate(Screen.Login.route) {
@@ -120,6 +130,7 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
         composable(Screen.MisSolicitudes.route) {
             MisSolicitudesScreen(
                 solicitudes = uiState.solicitudes,
+                cargando = uiState.estadoCarga == com.example.miprestamoslab.ui.EstadoCarga.CARGANDO,
                 onSolicitudClick = { solicitudId ->
                     navController.navigate(Screen.SolicitudDetalle.createRoute(solicitudId))
                 },
@@ -156,6 +167,14 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
                 onAprobar = { id -> viewModel.aprobarSolicitud(id) },
                 onRechazar = { id, razon -> viewModel.rechazarSolicitud(id, razon) },
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        // HU-09 / HU-10 / HU-11 / HU-12: administración del inventario
+        composable(Screen.GestionInventario.route) {
+            GestionInventarioScreen(
+                viewModel = viewModel,
+                onVolver = { navController.popBackStack() }
             )
         }
     }
