@@ -1,6 +1,7 @@
 package com.example.miprestamoslab.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,6 +36,8 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
     val navController = rememberNavController()
     // Semana 7: recolección consciente del ciclo de vida (no se sigue emitiendo en background)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val evidencias by viewModel.evidencias.collectAsStateWithLifecycle()
+    val luzAmbiente by viewModel.luzAmbiente.collectAsStateWithLifecycle()
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
 
@@ -87,9 +90,16 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
             val equipoId = backStackEntry.arguments?.getInt("equipoId") ?: -1
             viewModel.cargarEquipo(equipoId)
 
+            // HU-14: el sensor de luz solo está activo mientras esta pantalla está visible
+            DisposableEffect(Unit) {
+                viewModel.iniciarLecturaLuz()
+                onDispose { viewModel.detenerLecturaLuz() }
+            }
+
             EquipoDetalleScreen(
                 equipo = uiState.equipoSeleccionado,
                 mensaje = uiState.mensaje,
+                luzAmbiente = luzAmbiente,
                 onLimpiarMensaje = { viewModel.limpiarMensaje() },
                 onSolicitar = { id ->
                     navController.navigate(Screen.SolicitudForm.createRoute(id))
@@ -144,10 +154,15 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel(factory = PrestamoV
         ) { backStackEntry ->
             val solicitudId = backStackEntry.arguments?.getInt("solicitudId") ?: -1
             viewModel.cargarSolicitud(solicitudId)
+            // HU-13: observa las evidencias adjuntas a esta solicitud
+            viewModel.cargarEvidencias(solicitudId)
 
             SolicitudDetalleScreen(
                 solicitud = uiState.solicitudSeleccionada,
                 mensaje = uiState.mensaje,
+                evidencias = evidencias,
+                adjuntando = uiState.guardando,
+                onAdjuntarEvidencia = { uri -> viewModel.registrarEvidencia(solicitudId, uri) },
                 onLimpiarMensaje = { viewModel.limpiarMensaje() },
                 onCancelar = { id ->
                     viewModel.cancelarSolicitud(id) {

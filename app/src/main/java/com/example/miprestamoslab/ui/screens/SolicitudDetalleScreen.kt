@@ -1,5 +1,8 @@
 package com.example.miprestamoslab.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -8,8 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.miprestamoslab.model.EstadoSolicitud
+import com.example.miprestamoslab.model.Evidencia
 import com.example.miprestamoslab.model.SolicitudPrestamo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -17,6 +24,9 @@ import com.example.miprestamoslab.model.SolicitudPrestamo
 fun SolicitudDetalleScreen(
     solicitud: SolicitudPrestamo?,
     mensaje: String?,
+    evidencias: List<Evidencia> = emptyList(),
+    adjuntando: Boolean = false,
+    onAdjuntarEvidencia: (String) -> Unit = {},
     onLimpiarMensaje: () -> Unit,
     onCancelar: (Int) -> Unit,
     onBack: () -> Unit
@@ -95,6 +105,55 @@ fun SolicitudDetalleScreen(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- HU-13: evidencia fotográfica ---
+                    // Photo Picker del sistema: no requiere permisos de cámara ni de almacenamiento
+                    // (mínimo privilegio) y solo se persiste la URI + metadatos en Room.
+                    Text(
+                        text = "Evidencias",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { contentDescription = "Evidencias de la solicitud" }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val selectorEvidencia = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.PickVisualMedia()
+                    ) { uri ->
+                        uri?.let { onAdjuntarEvidencia(it.toString()) }
+                    }
+
+                    Button(
+                        onClick = {
+                            selectorEvidencia.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        enabled = !adjuntando,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = "Adjuntar evidencia" }
+                    ) {
+                        if (adjuntando) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else {
+                            Text("Adjuntar evidencia")
+                        }
+                    }
+
+                    if (evidencias.isEmpty()) {
+                        Text(
+                            text = "Sin evidencias adjuntas",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    } else {
+                        evidencias.forEach { evidencia -> EvidenciaItem(evidencia) }
+                    }
                 }
             }
 
@@ -114,5 +173,32 @@ fun DetalleItem(label: String, value: String) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(text = label, style = MaterialTheme.typography.labelLarge)
         Text(text = value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun EvidenciaItem(evidencia: Evidencia) {
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "Evidencia #${evidencia.id}",
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = "Estado: ${evidencia.estado.name}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                // Solo la URI y metadatos: nunca el bitmap
+                text = evidencia.uri,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }

@@ -61,4 +61,12 @@ interface PrestamoDao {
 
     @Query("SELECT COUNT(*) FROM equipos")
     suspend fun contarEquipos(): Int
+
+    // --- HU-13: evidencias fotográficas ---
+
+    @Query("SELECT * FROM evidencias WHERE solicitudId = :solicitudId ORDER BY id ASC")
+    fun observarEvidencias(solicitudId: Int): Flow<List<EvidenciaEntity>>
+
+    @Insert
+    suspend fun insertarEvidencia(evidencia: EvidenciaEntity): Long
 }

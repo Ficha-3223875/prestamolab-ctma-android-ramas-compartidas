@@ -5,12 +5,16 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.miprestamoslab.data.capabilities.FuenteLuz
+import com.example.miprestamoslab.data.capabilities.LuzAmbientalSensor
 import com.example.miprestamoslab.data.local.PrestamoDatabase
 import com.example.miprestamoslab.data.local.SesionDataStore
 import com.example.miprestamoslab.data.local.SesionStore
 import com.example.miprestamoslab.data.remote.RetrofitFactory
 import com.example.miprestamoslab.data.remote.SincronizadorRemoto
+import com.example.miprestamoslab.data.repository.EvidenciaRepository
 import com.example.miprestamoslab.data.repository.PrestamoRepository
+import com.example.miprestamoslab.data.repository.RoomEvidenciaRepository
 import com.example.miprestamoslab.data.repository.RoomPrestamoRepository
 import com.example.miprestamoslab.domain.ambienteValido
 import com.example.miprestamoslab.domain.duracionValida
@@ -18,6 +22,7 @@ import com.example.miprestamoslab.domain.propositoValido
 import com.example.miprestamoslab.model.CategoriaEquipo
 import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.model.EstadoSolicitud
+import com.example.miprestamoslab.model.Evidencia
 import com.example.miprestamoslab.model.Rol
 import com.example.miprestamoslab.model.SolicitudPrestamo
 import com.example.miprestamoslab.model.Usuario
@@ -33,13 +38,23 @@ import kotlinx.coroutines.launch
 class PrestamoViewModel(
     private val repository: PrestamoRepository,
     private val sesionStore: SesionStore,
-    private val sincronizador: SincronizadorRemoto? = null
+    private val sincronizador: SincronizadorRemoto? = null,
+    private val evidenciaRepository: EvidenciaRepository? = null,
+    private val fuenteLuz: FuenteLuz? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PrestamoUiState())
     val uiState: StateFlow<PrestamoUiState> = _uiState.asStateFlow()
 
+    /** Evidencias de la solicitud seleccionada (HU-13). */
+    private val _evidencias = MutableStateFlow<List<Evidencia>>(emptyList())
+    val evidencias: StateFlow<List<Evidencia>> = _evidencias.asStateFlow()
+
+    /** Lectura del sensor de luz ambiente (HU-14); `null` si el dispositivo no lo tiene. */
+    val luzAmbiente: StateFlow<Float?> = fuenteLuz?.lux ?: MutableStateFlow(null)
+
     private var observacionJob: Job? = null
+    private var evidenciasJob: Job? = null
 
     init {
         iniciarObservacionDeDatos()
@@ -91,6 +106,64 @@ class PrestamoViewModel(
     fun reintentarCarga() {
         _uiState.update { it.copy(estadoCarga = EstadoCarga.CARGANDO, errorCarga = null) }
         iniciarObservacionDeDatos()
+    }
+
+    // --- HU-13: evidencia fotográfica ---
+
+    /** Observa las evidencias de la solicitud abierta. */
+    fun cargarEvidencias(solicitudId: Int) {
+        val repo = evidenciaRepository
+        if (repo == null || solicitudId <= 0) {
+            _evidencias.value = emptyList()
+            return
+        }
+
+        evidenciasJob?.cancel()
+        evidenciasJob = viewModelScope.launch {
+            try {
+                repo.observarEvidencias(solicitudId).collect { lista -> _evidencias.value = lista }
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                // Estado recuperable: se muestran sin evidencias y el aviso llega por el mensaje
+                _evidencias.value = emptyList()
+                _uiState.update { it.copy(mensaje = error.message ?: "No fue posible leer las evidencias") }
+            }
+        }
+    }
+
+    /** Adjunta la URI elegida en el Photo Picker (nunca el Bitmap). */
+    fun registrarEvidencia(solicitudId: Int, uri: String) {
+        val repo = evidenciaRepository
+        if (repo == null) {
+            _uiState.update { it.copy(mensaje = "Las evidencias no están habilitadas en este entorno") }
+            return
+        }
+        if (_uiState.value.guardando) return
+
+        _uiState.update { it.copy(guardando = true) }
+        viewModelScope.launch {
+            repo.registrarEvidencia(solicitudId, uri)
+                .onSuccess {
+                    _uiState.update { it.copy(guardando = false, mensaje = "Evidencia adjuntada correctamente") }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(guardando = false, mensaje = error.message ?: "No se pudo adjuntar la evidencia")
+                    }
+                }
+        }
+    }
+
+    // --- HU-14: sensor de luz ambiente ---
+
+    /** Activa el sensor solo mientras se necesita (mínimo consumo de batería). */
+    fun iniciarLecturaLuz() {
+        fuenteLuz?.iniciar()
+    }
+
+    fun detenerLecturaLuz() {
+        fuenteLuz?.detener()
     }
 
     // Autenticación (HU_15)
@@ -342,6 +415,8 @@ class PrestamoViewModel(
     }
 
     override fun onCleared() {
+        evidenciasJob?.cancel()
+        fuenteLuz?.detener()
         repository.liberarRecursos()
     }
 
@@ -356,7 +431,9 @@ class PrestamoViewModel(
                     sincronizador = SincronizadorRemoto(
                         api = RetrofitFactory.crear(),
                         dao = database.prestamoDao()
-                    )
+                    ),
+                    evidenciaRepository = RoomEvidenciaRepository(database.prestamoDao()),
+                    fuenteLuz = LuzAmbientalSensor(app)
                 )
             }
         }

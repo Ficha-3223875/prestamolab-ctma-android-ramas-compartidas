@@ -8,15 +8,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.miprestamoslab.model.Equipo
 import com.example.miprestamoslab.model.EstadoEquipo
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EquipoDetalleScreen(
     equipo: Equipo?,
     mensaje: String?,
+    luzAmbiente: Float? = null,
     onLimpiarMensaje: () -> Unit,
     onSolicitar: (Int) -> Unit,
     onBack: () -> Unit
@@ -63,6 +67,24 @@ fun EquipoDetalleScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = "Categoría: ${equipo.categoria.name}")
                     Text(text = "Estado: ${equipo.estado.name}")
+
+                    // HU-14: capacidad física adicional (sensor integrado, sin permisos)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (luzAmbiente == null) {
+                            "Luz ambiente: no disponible en este dispositivo"
+                        } else {
+                            "Luz ambiente: ${luzAmbiente.roundToInt()} lx"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.semantics {
+                            contentDescription = if (luzAmbiente == null) {
+                                "Luz ambiente no disponible"
+                            } else {
+                                "Luz ambiente de ${luzAmbiente.roundToInt()} lux"
+                            }
+                        }
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
