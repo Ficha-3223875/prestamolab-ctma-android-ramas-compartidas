@@ -14,6 +14,8 @@ Relaciona cada Historia de Usuario (HU) con su implementación en código, sus c
 | HU-08 Aprobación y rechazo | CA-08.1, CA-08.2 | `ui/PrestamoViewModel.kt` → `aprobarSolicitud`/`rechazarSolicitud`; repositorio | `InMemoryPrestamoRepositoryTest` | TC-12, TC-13 |
 | HU-09 Gestión de inventario | CA-09.1, CA-09.2 | `ui/screens/GestionInventarioScreen.kt`; repositorio → `agregar/editar/cambiarEstado` | `InMemoryPrestamoRepositoryTest` | TC-14 |
 | HU-10 Cierre de sesión | CA-10.1, CA-10.2 | `ui/PrestamoViewModel.kt` → `logout()`; `SesionDataStore.limpiarSesion` | `PrestamoViewModelTest` | TC-15 |
+| HU-13 Evidencia fotográfica | CA-13.1, CA-13.2 | `ui/screens/SolicitudDetalleScreen.kt` (Photo Picker); `model/Evidencia.kt`; `data/repository/EvidenciaRepository.kt`; `data/local/EvidenciaEntity.kt` (migración 1→2) | `EvidenciaTest` | TC-19 |
+| HU-14 Sensor de luz ambiente | CA-14.1, CA-14.2 | `data/capabilities/LuzAmbiental.kt` (`SensorManager`, `TYPE_LIGHT`, sin permisos); `ui/screens/EquipoDetalleScreen.kt` | — (lectura en vivo: TC-20) | TC-20 |
 
 ## Reglas de negocio → validación
 

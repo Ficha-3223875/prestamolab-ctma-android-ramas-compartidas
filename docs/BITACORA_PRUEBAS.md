@@ -16,8 +16,11 @@ no se reportan PASS/FAIL inventados).
 | 2026-09-24 | `EstadoCargaTest` (Semana 7: Cargando/Contenido/Vacío/Error) | PASS | 5 tests, 0 fallos (`testDebugUnitTest`) |
 | 2026-09-24 | `DtoMappingTest` (Semana 8: DTO ↔ dominio) | PASS | 7 tests, 0 fallos (`testDebugUnitTest`) |
 | 2026-09-24 | `PrestamoApiServiceTest` (Semana 8: MockWebServer 200/404/500/timeout/JSON inválido) | PASS | 7 tests, 0 fallos (`testDebugUnitTest`) |
+| 2026-09-24 | `EvidenciaTest` (Semana 9 / HU-13: URI + metadatos, validación de URI vacía, mensaje recuperable) | PASS | 5 tests, 0 fallos (`testDebugUnitTest`) |
+| 2026-09-24 | `CatalogoScreenUiTest` (Semana 9 / prueba UI instrumentada) | PENDIENTE | Compila (`compileDebugAndroidTestKotlin` OK); requiere emulador/dispositivo para ejecutarse |
 
-> **Total automatizado: 41 tests, 0 fallos** (`./gradlew testDebugUnitTest`, 24/09/2026, rama `feature/JuanPaniagua`).
+> **Total automatizado: 46 tests, 0 fallos** (`./gradlew testDebugUnitTest`, 24/09/2026, rama `feature/JuanPaniagua`).
+> Quality gates de la entrega: `assembleDebug` ✅ · `testDebugUnitTest` 46/0 ✅ · `lintDebug` ✅ · `compileDebugAndroidTestKotlin` ✅.
 
 ## 2. Pruebas manuales (suite TC-01 … TC-15)
 

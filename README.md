@@ -286,7 +286,8 @@ Ejecutar localmente los mismos quality gates que CI:
 | Room/DataStore con responsabilidad clara y fuente única de verdad | ✅ | `data/local/*`, `RoomPrestamoRepository` |
 | Corrutinas/Flow respetan ciclo de vida y manejo de errores | ✅ | `collectAsStateWithLifecycle`, `CancellationException` propagada, `RedError` tipado |
 | La integración REST maneja DTO, mapeo, timeouts y errores | ✅ | `data/remote/*` + `PrestamoApiServiceTest` (MockWebServer) |
-| Pruebas unitarias y/o de integración automatizadas | ✅ | 41 tests unitarios, 0 fallos |
+| Pruebas unitarias y/o de integración automatizadas | ✅ | 46 tests unitarios, 0 fallos |
+| Evidencia fotográfica con URI persistida (sin Bitmap/Base64) | ✅ | HU-13: Photo Picker + `EvidenciaEntity` (Room v2, migración explícita) + `EvidenciaTest` |
 | GitHub Actions ejecuta build, tests y lint | ✅ | `.github/workflows/ci.yml` |
 | Defectos documentados con evidencia reproducible | ✅ | `docs/BITACORA_PRUEBAS.md` §3 |
 | Confirmación y regresión cuando aplica | ⬜ | Pendiente de ejecución manual y de abrir/cerrar Issues |
