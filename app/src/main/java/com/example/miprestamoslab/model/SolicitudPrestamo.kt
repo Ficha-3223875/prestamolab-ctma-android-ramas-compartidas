@@ -7,5 +7,7 @@ data class SolicitudPrestamo(
     val proposito: String,
     val duracionHoras: Int,
     val estado: EstadoSolicitud,
-    val razonRechazo: String? = null
+    val razonRechazo: String? = null,
+    val fotoDevolucionUri: String? = null,
+    val syncStatus: String = "SYNCED"
 )

@@ -6,6 +6,8 @@ import com.example.miprestamoslab.model.EstadoEquipo
 import com.example.miprestamoslab.model.SolicitudPrestamo
 
 interface PrestamoRepository {
+    fun obtenerEquiposFlow(): kotlinx.coroutines.flow.Flow<List<Equipo>>
+    fun obtenerSolicitudesFlow(): kotlinx.coroutines.flow.Flow<List<SolicitudPrestamo>>
     fun obtenerEquipos(): List<Equipo>
     fun obtenerEquipo(id: Int): Equipo?
     fun obtenerSolicitudes(): List<SolicitudPrestamo>
@@ -19,4 +21,5 @@ interface PrestamoRepository {
     fun agregarEquipo(nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> // HU 10
     fun editarEquipo(id: Int, nombre: String, categoria: CategoriaEquipo, descripcion: String): Result<Unit> // HU 11
     fun cambiarEstadoEquipo(id: Int, nuevoEstado: EstadoEquipo): Result<Unit> // HU 12
+    fun registrarDevolucion(solicitudId: Int, fotoUri: String): Result<Unit>
 }

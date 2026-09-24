@@ -1,14 +1,19 @@
 package com.example.miprestamoslab.ui.navigation
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.miprestamoslab.ui.ListadoUiState
 import com.example.miprestamoslab.ui.PrestamoViewModel
 import com.example.miprestamoslab.ui.screens.*
 
@@ -32,7 +37,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
     val navController = rememberNavController()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
 
@@ -51,23 +56,44 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
         }
 
         composable(Screen.Catalogo.route) {
-            CatalogoScreen(
-                equipos = uiState.equipos,
-                usuario = uiState.usuarioAutenticado,
-                onEquipoClick = { equipoId ->
-                    navController.navigate(Screen.EquipoDetalle.createRoute(equipoId))
-                },
-                onVerMisSolicitudes = {
-                    navController.navigate(Screen.MisSolicitudes.route)
-                },
-                onVerSolicitudesPendientes = { navController.navigate(Screen.SolicitudesPendientes.route) },
-                onLogout = {
-                    viewModel.logout()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Catalogo.route) { inclusive = true }
+            when (val state = uiState.listadoEquipos) {
+                is ListadoUiState.Cargando -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
-            )
+                is ListadoUiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        Text(text = "Error: ${state.mensaje}", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                else -> {
+                    val equipos = if (state is ListadoUiState.Contenido) state.equipos else emptyList()
+                    CatalogoScreen(
+                        equipos = equipos,
+                        usuario = uiState.usuarioAutenticado,
+                        onEquipoClick = { equipoId ->
+                            navController.navigate(Screen.EquipoDetalle.createRoute(equipoId))
+                        },
+                        onVerMisSolicitudes = {
+                            navController.navigate(Screen.MisSolicitudes.route)
+                        },
+                        onVerSolicitudesPendientes = { navController.navigate(Screen.SolicitudesPendientes.route) },
+                        onLogout = {
+                            viewModel.logout()
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Catalogo.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+            }
         }
 
         composable(
@@ -142,6 +168,9 @@ fun PrestamoNavHost(viewModel: PrestamoViewModel = viewModel()) {
                     viewModel.cancelarSolicitud(id) {
                         navController.popBackStack()
                     }
+                },
+                onRegistrarDevolucion = { id, uri ->
+                    viewModel.registrarDevolucion(id, uri)
                 },
                 onBack = { navController.popBackStack() }
             )

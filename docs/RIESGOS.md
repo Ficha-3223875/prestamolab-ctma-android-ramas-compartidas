@@ -12,3 +12,5 @@
 | R-08 | Visualización desactualizada del estado de las solicitudes del usuario | Media | Media | Medio | Actualización automática del UiState tras cambios |
 | R-09 | Aprobación o rechazo no autorizado por usuarios sin rol Administrador | Baja | Alta | Alto | Restricción de vista y acciones según el rol del usuario |
 | R-10 | Modificación o eliminación inconsistente de un equipo en el inventario | Media | Alta | Alto | Sincronización en el repositorio central del sistema |
+| R-11 | Denegación del permiso de cámara o fallo al generar URI temporal para la evidencia de devolución | Media | Media | Medio | Solicitud de permisos en tiempo de ejecución y uso seguro de FileProvider con manejo de excepciones |
+| R-12 | Bloqueo de notificaciones locales en Android 13+ por falta de concesión del permiso `POST_NOTIFICATIONS` | Media | Media | Medio | Solicitud automática del permiso en MainActivity al iniciar la app y canales de alta prioridad |
