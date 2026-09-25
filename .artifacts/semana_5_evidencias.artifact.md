@@ -149,3 +149,60 @@
 - **Arquitectura MVVM + Jetpack Compose + Room:** Componentes desacoplados, UI declarativa reactiva y persistencia transaccional.
 - **Nuevas Características Incorporadas:** Captura fotográfica con cámara para devoluciones, visor de evidencia y notificaciones locales push.
 - **Resultado del Incremento:** **Versión 0.2.0 Estable, Documentada y Verificada**.
+
+---
+
+## 11. Cuestionario Técnico y Arquitectural de la Solución
+
+### 1. Abra una HU y muestre un criterio de aceptación; siga la trazabilidad hasta el código y la prueba que lo valida.
+- **HU-05 (Formulario de solicitud de préstamo):**
+  - **Criterio de Aceptación:** El propósito del préstamo debe tener obligatoriamente entre 10 y 180 caracteres para poder ser enviado.
+  - **Trazabilidad al Código:**
+    - Regla de negocio en [Validaciones.kt](file:///C:/Users/MiguelFormacion.LenovoLOQ_MIGAN/AndroidStudioProjects/prestamolab-ctma-android-ramas-compartidas/app/src/main/java/com/example/miprestamoslab/domain/Validaciones.kt): `fun propositoValido(proposito: String): Boolean = proposito.trim().length in 10..180`
+    - Validación en ViewModel en [PrestamoViewModel.kt](file:///C:/Users/MiguelFormacion.LenovoLOQ_MIGAN/AndroidStudioProjects/prestamolab-ctma-android-ramas-compartidas/app/src/main/java/com/example/miprestamoslab/ui/PrestamoViewModel.kt): `if (!propositoValido(proposito)) errores.add(...)`
+  - **Trazabilidad a la Prueba:**
+    - Prueba unitaria en [ValidacionesTest.kt](file:///C:/Users/MiguelFormacion.LenovoLOQ_MIGAN/AndroidStudioProjects/prestamolab-ctma-android-ramas-compartidas/app/src/test/java/com/example/miprestamoslab/ValidacionesTest.kt): `propositoValido_debeAceptarEntre10Y180Caracteres()`
+    - Caso de prueba manual: **TC-08**.
+
+### 2. Explique por qué Room se considera fuente local canónica en su solución.
+- Se considera la **fuente canónica local (Single Source of Truth)** porque todos los estados del dominio, equipos y solicitudes se leen y escriben directamente a través de las entidades transaccionales de Room (`EquipoEntity`, `SolicitudPrestamoEntity`) mediante DAOs reactivos con `Flow`. Ningún componente de la UI accede a fuentes volátiles o temporales; Room garantiza la persistencia, consistencia relacional y disponibilidad *offline-first*.
+
+### 3. ¿Qué diferencia existe entre Flow y StateFlow en el contexto del ViewModel?
+- **Flow:** Es un flujo *frío (cold stream)*; no emite valores hasta que hay un colector activo y recalcula o reejecuta su lógica para cada nuevo suscriptor.
+- **StateFlow:** Es un flujo *caliente (hot stream)* especializado en mantener estado; siempre retiene un valor actual cacheado (`value`), emite inmediatamente el último estado a cualquier nuevo suscriptor (ideal para Jetpack Compose con `.collectAsStateWithLifecycle()`) y requiere obligatoriamente un valor inicial. Se utiliza en `PrestamoViewModel` para mantener el `PrestamoUiState`.
+
+### 4. Muestre un caso de error de red y explique cómo se representa en UiState.
+- Cuando ocurre un fallo en una operación (como un error de creación de solicitud o login inválido), se representa en el estado de la UI mediante [PrestamoUiState.kt](file:///C:/Users/MiguelFormacion.LenovoLOQ_MIGAN/AndroidStudioProjects/prestamolab-ctma-android-ramas-compartidas/app/src/main/java/com/example/miprestamoslab/ui/PrestamoUiState.kt):
+  - `operacionState = OperacionUiState.Fallida("Mensaje de error")`
+  - `mensaje = "Mensaje de error"`
+  - `guardando = false`
+  La UI observa estos cambios reactivamente mediante `StateFlow` y despliega un `Snackbar` o texto de error descriptivo.
+
+### 5. Seleccione un test automatizado y explique Arrange, Act y Assert.
+- Analizando el test `crearSolicitud_conDatosValidos_debeCambiarEstadoEquipo` en [PrestamoViewModelTest.kt](file:///C:/Users/MiguelFormacion.LenovoLOQ_MIGAN/AndroidStudioProjects/prestamolab-ctma-android-ramas-compartidas/app/src/test/java/com/example/miprestamoslab/PrestamoViewModelTest.kt):
+  - **Arrange (Preparar):** Se configura el ViewModel con un repositorio de prueba y un equipo disponible con ID 1 en estado `DISPONIBLE`.
+  - **Act (Actuar):** Se invoca la función del ViewModel `viewModel.crearSolicitud(1, "Lab", "Propósito de prueba válido", "2", {})`.
+  - **Assert (Afirmar):** Se comprueba mediante `assertEquals(OperacionUiState.Exitosa, uiState.operacionState)` y verificando el estado del equipo que la solicitud fue procesada correctamente.
+
+### 6. ¿Qué parte del incremento fue desarrollada mediante TDD y qué aprendieron?
+- Las **reglas de negocio y funciones de validación** (`Validaciones.kt`) y la lógica transaccional de los repositorios (`InMemoryPrestamoRepository`) fueron desarrolladas bajo **TDD (Test-Driven Development)**: primero se escribieron las pruebas unitarias fallidas (`ValidacionesTest`) y luego el código productivo para hacerlas pasar.
+- **Aprendizaje:** Permitió diseñar interfaces limpias y puras, anticipando casos borde (cadenas vacías, límites numéricos) antes de construir las pantallas de la interfaz de usuario.
+
+### 7. Muestre un defecto encontrado, su confirmación y la regresión seleccionada.
+- **Defecto ID:** `DEF-01` (Doble toque rápido en el botón de confirmación del formulario de préstamo generaba solicitudes duplicadas).
+- **Confirmación:** Detectado durante la ejecución manual de pruebas (**TC-09**).
+- **Solución y Regresión:** Se introdujo la bandera de control `isProcessing` en `PrestamoViewModel` para bloquear llamadas concurrentes. La regresión se confirmó ejecutando exitosamente los tests unitarios del ViewModel y validando el caso **TC-09** (PASS).
+
+### 8. ¿Qué permiso del dispositivo solicitaron y por qué cumple mínimo privilegio?
+- **Permisos solicitados:** `CAMERA` y `POST_NOTIFICATIONS`.
+- **Principio de menor privilegio:** No se solicitan de forma masiva al instalar la aplicación. `CAMERA` se solicita únicamente bajo demanda en tiempo de ejecución (`ActivityResultContracts.RequestPermission`) cuando el usuario pulsa específicamente el botón de adjuntar/capturar foto de devolución. `POST_NOTIFICATIONS` se solicita para habilitar el canal de alertas críticas de solicitudes nuevas.
+
+### 9. ¿Qué quality gates utiliza su Pull Request?
+- **Quality Gates:**
+  1. Compilación exitosa de Gradle (`app:assembleDebug`).
+  2. Aprobación del 100% de la suite de pruebas unitarias (`app:testDebugUnitTest`, 22/22 tests pasando).
+  3. Ausencia de errores críticos de linter y advertencias de código obsoleto.
+  4. Revisión de trazabilidad entre HU y casos de prueba.
+
+### 10. ¿Qué riesgo residual permanece en el incremento actual?
+- **Riesgo residual (R-12 / Conectividad remota):** Dado que la arquitectura está preparada con un repositorio *offline-first* y DTOs de API REST pero operando localmente con Room y *mocks*, el riesgo residual radica en la eventual sincronización de datos con un servidor backend en producción real ante escenarios de pérdida intermitente de red, lo cual requerirá la implementación posterior de un servicio de background sync (ej. WorkManager).
